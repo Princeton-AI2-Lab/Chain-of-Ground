@@ -1,0 +1,4 @@
+model,accuracy
+qwen3-vl-32b-instruct-dual,95.2
+qwen2.5vl-72b+qwen3vl-32b,71.4
+qwen3-vl-235b-32b,89.5

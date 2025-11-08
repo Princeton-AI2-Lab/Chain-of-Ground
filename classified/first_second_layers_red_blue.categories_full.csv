@@ -1,0 +1,6 @@
+model,avg_development,avg_creative,avg_cad,avg_scientific,avg_office,avg_operating_systems,avg_total
+qwen3-vl-235b-32b-235b,71.0,60.0,58.1,70.3,75.6,62.6,65.4
+qwen3-vl-32b-triple,69.4,58.2,54.3,67.5,75.8,66.7,64.1
+uitars1.5-7b+qwen3vl-235b+qwen3vl-32b,66.3,58.6,49.8,61.3,72.8,59.1,60.5
+qwen2.5vl-72b+qwen3vl-235b+qwen3vl-32b,68.4,58.5,46.1,60.0,79.6,60.6,61.0
+qwen2.5vl-72b+uitars1.5-7b+qwen3vl-32b,63.3,,66.3,,,,64.3

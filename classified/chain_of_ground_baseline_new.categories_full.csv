@@ -1,0 +1,2 @@
+model,avg_development,avg_creative,avg_cad,avg_scientific,avg_office,avg_operating_systems,avg_total
+qwen3-vl-235b,70.5,50.0,48.6,78.5,,66.8,62.7

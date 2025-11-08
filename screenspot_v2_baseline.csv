@@ -1,0 +1,5 @@
+model,desktop,mobile,web,AVG
+qwen2.5-vl-72b-instruct,82.6,62.7,59.7,68.3
+qwen3-vl-32b-instruct,93.5,95.9,91.2,93.5
+qwen3-vl-235b-instruct,96.1,95.4,92.9,94.8
+uitars1.5-7b,88.3,,,

@@ -1,0 +1,4 @@
+model,accuracy
+qwen3-vl-235b-32b-235b,92.8
+qwen3vl-235b+uitars1.5-7b+qwen3vl-32b,81.4
+,

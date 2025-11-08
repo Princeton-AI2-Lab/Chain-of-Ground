@@ -1,0 +1,60 @@
+\section{Methods}
+
+\subsection{Multi-step Strategy}
+
+Our framework adopts a multi-step grounding strategy designed to improve accuracy, consistency, and interpretability in complex GUI environments. Instead of producing the final prediction in a single forward pass, the model performs grounding in multiple stages, progressively refining its hypothesis by incorporating intermediate signals.
+
+The process begins with an initial grounding attempt based on the instruction and raw screenshot. The output from this first pass—either a predicted coordinate or region—is then fed back into the model in the next stage as reference information. We experiment with two types of reference formats: (1) textual references (e.g., “Previous location: (x, y)”), and (2) visual references, where the image is marked with a graphical overlay at the predicted region (e.g., bounding box or circle).
+
+For textual feedback, we test two coordinate normalization schemes:  
+(1) \textbf{pixel-level coordinates}, where $(x, y)$ refers to absolute positions in image space (e.g., “Previous location: (238, 412)”), and  
+(2) \textbf{scaled coordinates}, where $(x, y)$ are normalized to a [0, 1000] range, independent of resolution (e.g., “Previous location: (241, 678) out of 1000”).  
+The latter allows for scale-invariant referencing across devices and screen sizes. We include both variants in ablation experiments to measure their impact on grounding accuracy and consistency.
+
+This refinement process can be repeated. In addition to the default two-step strategy, we evaluate a three-pass variant, where the model receives both the original instruction and a second-stage marked output. The third step allows for error correction or fine-grained adjustment when earlier steps are uncertain.
+
+Our experiments show that the two-step strategy provides a strong trade-off, yielding substantial gains over single-pass grounding while maintaining low latency. The three-step pipeline adds marginal accuracy (under 1 percent) but increases inference time and prompt complexity. Therefore, we use two-step prompting as default, with optional third-step refinement when task conditions require high precision.
+
+This strategy is compatible with various vision-language backbones. Vision-aware models (e.g., Qwen3-VL) accept marked images directly, while text-only models (e.g., UI-TARS-1.5) receive structured prompts encoding reference feedback using one of the normalization schemes.
+
+\subsection{Prompt Design}
+
+To support multi-step grounding, we design prompt templates that allow the model to receive contextual information from previous steps. Our approach supports both text-based and image-based references, depending on model capabilities.
+
+In the \textbf{two-pass setting}, the model first receives the original screenshot and instruction:
+
+\begin{quote}
+\texttt{Instruction: Press the fan speed button.}
+\end{quote}
+
+After generating the first prediction, we feed it back into the second prompt in one of two ways:
+
+\begin{itemize}
+\item \textbf{Text-based reference:}
+\begin{quote}
+\texttt{Instruction: Press the fan speed button.\\
+Previously selected location: (241, 678) out of 1000.}
+\end{quote}
+
+\item \textbf{Visual-based reference:}  
+We overlay a red square or circle at the predicted location on the screenshot and reuse the original instruction:
+\begin{quote}
+\texttt{Instruction: Press the fan speed button.}
+\end{quote}
+\end{itemize}
+
+In the \textbf{three-pass setting}, the same structure is extended one step further. The second-stage prediction is now also passed into the third step, yielding:
+
+\begin{itemize}
+\item \textbf{Text-based reference:}
+\begin{quote}
+\texttt{Instruction: Press the fan speed button.\\
+First selection: (241, 678) out of 1000.\\
+Second selection: (266, 702) out of 1000.}
+\end{quote}
+
+\item \textbf{Visual-based reference:}  
+We overlay both predictions on the image—first in red, second in blue—and pass the same instruction again.
+\end{itemize}
+
+We standardize coordinate format using either raw pixel values or normalized [0–1000] values, depending on the model and resolution consistency needs. For visual models, we use consistent overlay size and shape to ensure saliency without occlusion. All prompts are formatted with fixed templates to ensure consistency across models, and passed through the respective tokenizer pipelines without in-context examples unless otherwise noted.

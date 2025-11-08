@@ -1,0 +1,9 @@
+model,avg_development,avg_creative,avg_cad,avg_scientific,avg_office,avg_operating_systems,avg_total
+qwen3-vl-235b+uitars1.5-7b,45.3,33.3,28.2,52.5,58.6,41.9,41.5
+qwen3-vl-235b-dual,54.2,38.8,38.3,58.5,68.7,44.4,48.8
+uitars1.5-7b+qwen3-vl-235b,45.5,34.1,27.8,52.7,63.2,37.7,41.7
+qwen3-vl-235b-32b-dual,52.1,36.6,37.8,57.3,68.0,45.5,47.7
+qwen3-vl-32b-dual,57.2,46.3,42.3,58.5,67.9,47.9,52.2
+qwen2.5vl-72b+qwen3vl-32b,44.5,37.6,33.3,54.2,70.1,41.1,44.8
+uitars1.5-7b-dual,44.0,35.6,35.7,49.9,58.9,38.3,42.4
+qwen2.5-vl-72b+uitars1.5-7b,39.1,35.9,37.5,51.9,64.1,40.1,43.0
