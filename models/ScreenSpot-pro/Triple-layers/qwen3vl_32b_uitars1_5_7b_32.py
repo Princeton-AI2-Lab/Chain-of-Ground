@@ -73,13 +73,20 @@ def extract_first_point(text):
         return [float(match.group(1)), float(match.group(2))]  
     return None  
   
+def extract_point_tag(text):
+    pattern = r"<point>\s*(\d+)\s+(\d+)\s*</point>"
+    match = re.search(pattern, text, re.DOTALL)
+    if match:
+        return [int(match.group(1)), int(match.group(2))]
+    return None
+
 def extract_first_bounding_box(text):  
     pattern = r"\[\[(\d+\.\d+|\d+),(\d+\.\d+|\d+),(\d+\.\d+|\d+),(\d+\.\d+|\d+)\]\]"  
     match = re.search(pattern, text, re.DOTALL)  
     if match:  
         return [float(match.group(1)), float(match.group(2)),   
                 float(match.group(3)), float(match.group(4))]  
-    return None    
+        return None    
 
 
 class Qwen3VL32BTripleMethod:  
@@ -148,30 +155,29 @@ class Qwen3VL32BTripleMethod:
             }  
         ]  
         
-        for attempt in range(max_retries):  
-            try:  
-                response = self.uitars_client.chat.completions.create(  
-                    model=self.uitars_model,  
-                    messages=messages,  
-                    stream=True,  
-                    temperature=0.0,  
-                    max_tokens=2048  
-                )  
-                
-                response_text = ""  
-                for chunk in response:  
-                    content = chunk.choices[0].delta.content  
-                    if content is not None:  
-                        response_text += content  
-                
+        for attempt in range(max_retries):
+            try:
+                response = self.uitars_client.chat.completions.create(
+                    model=self.uitars_model,
+                    messages=messages,
+                    stream=True,
+                    temperature=0.0,
+                    max_tokens=2048
+                )
+
+                response_text = ""
+                for chunk in response:
+                    content = chunk.choices[0].delta.content
+                    if content is not None:
+                        response_text += content
+
                 self.debug_print(f"UITars API response: {response_text}")
-                return response_text  
-            
-        except Exception as e:  
-            self.debug_print(f"UITars API call failed (attempt {attempt + 1}/{max_retries}): {e}")
-            if attempt < max_retries - 1:  
-                time.sleep(2 ** attempt)  
-        
+                return response_text
+            except Exception as e:
+                self.debug_print(f"UITars API call failed (attempt {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(2 ** attempt)
+
         return None
     
     def parse_uitars_pixel_coordinates(self, response_text, image):
@@ -205,6 +211,14 @@ class Qwen3VL32BTripleMethod:
                     click_point = [x, y]  
             
          
+            if not click_point:
+                explicit_point = extract_point_tag(response_text)
+                if explicit_point:
+                    self.debug_print(f"Extracted explicit point tag: {explicit_point}")
+                    x = int(explicit_point[0])
+                    y = int(explicit_point[1])
+                    click_point = [x, y]
+            
             if not click_point:  
                 bbox = extract_first_bounding_box(response_text)
                 if bbox:  
@@ -293,11 +307,11 @@ class Qwen3VL32BTripleMethod:
             "Content-Type": "application/json"  
         }  
         
-        payload = {    
-                "model": model_name or self.qwen_model,  
-                "messages": messages,    
-                "temperature": 0.0 ,
-                "max_tokens": 4096,    
+        payload = {
+                "model": model_name or self.qwen_32b_model,
+                "messages": messages,
+                "temperature": self.override_generation_config.get("temperature", 0.0),
+                "max_tokens": self.override_generation_config.get("max_tokens", 4096),
             }
         
         for attempt in range(max_retries):  
