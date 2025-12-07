@@ -6,7 +6,7 @@
 
 </div>
 
-## Introduction
+## Overview
 Chain-of-Ground is a training-free, multi-step framework for GUI grounding. This repo implements triple-layer and two-layer pipelines with iterative reasoning and reference feedback, supports Qwen3-VL and UI-TARS backends, and includes ready-to-run evaluation and visualization tools. We also introduce TPanel-UI, a 420-image dataset of industrial control panels with blur/mask distortions and JSON annotations for precise point grounding.
 
 <div align="center">
@@ -20,7 +20,7 @@ Chain-of-Ground is a training-free, multi-step framework for GUI grounding. This
 - `eval_screenspot_pro.py` — evaluation and visualization utilities for dataset results
 - `model_factory.py` — factory for loading models by type (adjust imports if needed)
 
-Install (example):
+## Installation
 
 ```
 pip install pillow requests transformers torch tqdm matplotlib
@@ -31,7 +31,7 @@ pip install pillow requests transformers torch tqdm matplotlib
   - `DASHSCOPE_API_KEY` for Qwen3-VL via Dashscope
   - `OPENROUTER_API_KEY` for UI-TARS via OpenRouter
 
-## Using a Model (10 lines)
+## Quick Start
 Run a triple-layer Qwen method directly from file using dynamic import:
 
 ```
@@ -109,13 +109,7 @@ python eval_screenspot_pro.py \
 If your model file resides under `models/TPanel_UI` or `models/ScreenSpot-pro`, align import paths in `model_factory.py` or use dynamic import as shown.
 
 
-## Abstract
-We study UI grounding on screenshots by composing vision-language models into multi-stage pipelines. CoG-Data provides triple-layer and hybrid methods that (1) detect a candidate point, (2) refine it with explicit constraints, and (3) finalize the location. The pipelines convert normalized coordinates to pixel and [0,1] ranges, apply robust parsing of `<tool_call>` JSON outputs with regex fallbacks, and use resilient API calls with retries. We release code, dataset, and evaluation scripts to foster reproducible research.
-
-## Introduction
-Human-computer interaction on graphical UIs requires precise grounding of language instructions to screen coordinates. While single-shot models can be brittle, multi-stage pipelines decompose the task into detection, correction, and validation steps, improving reliability. CoG-Data operationalizes this idea with Qwen3-VL and UI-TARS models and provides an evaluation suite over diverse applications and platforms.
-
-## Method
+## Pipeline
 - Multi-stage architecture: initial detection → refinement → final validation.
 - Normalized-to-pixel mapping: model outputs in `[0,1000]` are projected to image pixels and normalized to `[0,1]` for reporting.
 - Robust parsing: structured `<tool_call>` JSON preferred; regex fallback for coordinates when formatting is degraded.
@@ -133,7 +127,7 @@ Human-computer interaction on graphical UIs requires precise grounding of langua
 ## Dataset
 - Images and JSON annotations with fields: `id`, `img_filename`, `img_size`, `bbox` (x1,y1,x2,y2), `platform`, `application`, `data_type/ui_type`, `instruction`, `instruction_cn`, `language`, `gt_type`, `instruction_style`.
 - Positive samples include a target `bbox`; negative samples are explicitly labeled with `gt_type=negative`.
-- Dataset: https://huggingface.co/datasets/CoG-Data/CoG-Data
+- Dataset: https://huggingface.co/datasets/chico-research/tpanel-ui
 
 ## Experimental Setup
 - Environment variables: `DASHSCOPE_API_KEY` (Dashscope), `OPENROUTER_API_KEY` (OpenRouter).
@@ -145,23 +139,12 @@ Human-computer interaction on graphical UIs requires precise grounding of langua
 - Text/icon accuracy (`text_acc`, `icon_acc`): per-UI-type correctness.
 - `wrong_format_num`: number of responses with invalid format.
 
-## Evaluation Protocol
-Run the evaluation script (adjust paths and model type):
-
-```
-python eval_screenspot_pro.py \
-  --model_type qwen3vl_235b_triple_mydata \
-  --screenspot_imgs /path/to/images \
-  --screenspot_test /path/to/test_jsons \
-  --task all \
-  --inst_style instruction \
-  --language en \
-  --gt_type positive \
-  --log_path ./logs.json
-```
-
 ## Results
-We report overall accuracy and per-UI-type accuracy (text, icon). Fine-grained reports by platform, application, instruction style, and ground-truth type are produced by the evaluation script. Visualizations for the first N positive samples are saved to `./visualizations_{model_type}`.
+We report overall accuracy and per-UI-type accuracy (text, icon). Example highlights:
+- ScreenSpot-Pro: 68.4% accuracy (+4.8 points)
+- TPanel-UI: +6.9 points over Qwen3‑VL‑235B
+
+Fine-grained reports by platform, application, instruction style, and ground-truth type are produced by the evaluation script. Visualizations for the first N positive samples are saved to `./visualizations_{model_type}`.
 
 ## Limitations
 - Reliance on external APIs may introduce latency and rate limits.
