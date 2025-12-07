@@ -1,6 +1,0 @@
-model,accuracy
-qwen3-vl-32b-instruct,88
-qwen3-vl-235b-instruct,90
-uitars1.5-7b,55.7
-qwen2.5-vl-72b-instruct,67.1
-gemini-2.5-pro,45.7

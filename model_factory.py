@@ -207,7 +207,7 @@ def build_model(args):
         from models.uitars1_5_7b_triple_mydata import UITarsTripleMethod
         model = UITarsTripleMethod()
 
-    # UITars + Kimi 组合方法  
+    # UITars + Kimi combined method
     elif model_type == "uitars_kimi":  
         from models.uitars_kimivl import UITarsKimiMethod  
         model = UITarsKimiMethod()  
@@ -215,12 +215,12 @@ def build_model(args):
         from models.kimivl_uitars import KimiUITarsMethod  
         model = KimiUITarsMethod()
 
-     # InternVL3 单独模型  
+    # InternVL3 standalone model
     elif model_type == "internvl3_only":  
         from models.internvl3_only import InternVL3OnlyMethod  
         model = InternVL3OnlyMethod()
 
-    # Gemini 单独模型  
+    # Gemini standalone model
     elif model_type == "gemini_only":  
         from models.gemini_only import GeminiOnlyMethod  
         model = GeminiOnlyMethod()  

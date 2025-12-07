@@ -62,21 +62,21 @@ class UITarsQwen3VLHybridMethod:
                  uitars_api_base="https://openrouter.ai/api/v1/chat/completions",
                  qwen_api_base="https://dashscope.aliyuncs.com/compatible-mode/v1"):
         """
-        三层组合模型: UITars初检(OpenRouter) + Qwen修正(Dashscope) + Qwen最终确定(Dashscope)
+        Three-layer composite model: UITars initial check (OpenRouter) + Qwen refinement (Dashscope) + Qwen finalization (Dashscope)
 
         Args:
-            uitars_model: UITars初检模型名称(OpenRouter格式)
-            qwen_refine_model: Qwen第二层修正模型名称(Dashscope格式)
-            qwen_final_model: Qwen第三层最终模型名称(Dashscope格式)
-            uitars_api_base: UITars的OpenRouter API端点
-            qwen_api_base: Qwen的Dashscope API端点
+            uitars_model: UITars initial detection model name (OpenRouter format)
+            qwen_refine_model: Qwen second-layer refinement model name (Dashscope format)
+            qwen_final_model: Qwen third-layer final model name (Dashscope format)
+            uitars_api_base: OpenRouter API endpoint for UITars
+            qwen_api_base: Dashscope API endpoint for Qwen
         """
       
         self.uitars_model = uitars_model
         self.uitars_api_base = uitars_api_base
         self.uitars_api_key = os.environ.get("OPENROUTER_API_KEY")
         if not self.uitars_api_key:
-            raise ValueError("请设置OPENROUTER_API_KEY环境变量")
+            raise ValueError("Please set OPENROUTER_API_KEY environment variable")
 
       
         self.qwen_refine_model = qwen_refine_model
@@ -84,7 +84,7 @@ class UITarsQwen3VLHybridMethod:
         self.qwen_api_base = qwen_api_base
         self.qwen_api_key = os.environ.get("DASHSCOPE_API_KEY")
         if not self.qwen_api_key:
-            raise ValueError("请设置DASHSCOPE_API_KEY环境变量")
+            raise ValueError("Please set DASHSCOPE_API_KEY environment variable")
 
         self.override_generation_config = {
             "temperature": 0.0,
@@ -95,7 +95,7 @@ class UITarsQwen3VLHybridMethod:
         self.debug_flag = True
 
     def plot_annotated_box(self, image, point, box_size=100, is_correct=None, alpha=80):
-        """在图片上标注预测点 - 使用半透明方框"""
+        """Annotate predicted point on image with semi-transparent box"""
         overlay = Image.new('RGBA', image.size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(overlay)
 
@@ -103,9 +103,9 @@ class UITarsQwen3VLHybridMethod:
             x, y = point
 
             if is_correct:
-                color = (0, 0, 255, alpha)  # 蓝色
+                color = (0, 0, 255, alpha)  # blue
             else:
-                color = (255, 0, 0, alpha)  # 红色
+                color = (255, 0, 0, alpha)  # red
 
             
             half_size = box_size // 2
@@ -120,7 +120,7 @@ class UITarsQwen3VLHybridMethod:
         return annotated_image.convert('RGB')
 
     def plot_annotated_circle(self, image, point, radius=15, is_correct=None, alpha=100):
-        """在图片上标注预测点 - 使用半透明实心圆"""
+        """Annotate predicted point on image with semi-transparent solid circle"""
         overlay = Image.new('RGBA', image.size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(overlay)
 
@@ -128,9 +128,9 @@ class UITarsQwen3VLHybridMethod:
             x, y = point
 
             if is_correct:
-                color = (0, 0, 255, alpha)  # 蓝色
+                color = (0, 0, 255, alpha)  # blue
             else:
-                color = (255, 0, 0, alpha)  # 红色
+                color = (255, 0, 0, alpha)  # red
 
             draw.ellipse(
                 (x - radius, y - radius, x + radius, y + radius),
@@ -143,7 +143,7 @@ class UITarsQwen3VLHybridMethod:
         return annotated_image.convert('RGB')
 
     def load_model(self):
-        """加载模型(API调用无需实际加载)"""
+        """Load model (API calls do not require actual loading)"""
         pass
 
     def set_generation_config(self, **kwargs):
@@ -154,9 +154,9 @@ class UITarsQwen3VLHybridMethod:
         if self.debug_flag:
             print(string)
 
-    # ------------------------------ UITars相关方法 ------------------------------
+    # ------------------------------ UITars Methods ------------------------------
     def call_openrouter_api(self, prompt, image, max_retries=3):
-        """调用OpenRouter API (UITars)"""
+        """Call OpenRouter API (UITars)"""
         base64_image = convert_pil_image_to_base64(image, format="PNG")  
 
         headers = {
@@ -199,21 +199,21 @@ class UITarsQwen3VLHybridMethod:
                 result = response.json()
                 content = result['choices'][0]['message']['content']
 
-                self.debug_print(f"UITars API响应状态: {response.status_code}")
-                self.debug_print(f"UITars完整响应:\n{content}")
+                self.debug_print(f"UITars API response status: {response.status_code}")
+                self.debug_print(f"UITars full response:\n{content}")
                 return content
 
             except Exception as e:
-                self.debug_print(f"UITars API调用失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+                self.debug_print(f"UITars API call failed (attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt < max_retries - 1:
                     time.sleep(2 ** attempt)
 
         return None
 
     def parse_uitars_pixel_coordinates(self, response, resized_width, resized_height):
-        """解析UITars返回的像素坐标并适配Qwen坐标体系"""
+        """Parse UITars pixel coordinates and adapt to Qwen coordinate system"""
         if not response:
-            self.debug_print("响应为空")
+            self.debug_print("Response is empty")
             return None
 
         try:
@@ -237,7 +237,7 @@ class UITarsQwen3VLHybridMethod:
                     if len(coords) == 2:
                         x_pixel = float(coords[0])
                         y_pixel = float(coords[1])
-                        self.debug_print(f"UITars提取像素坐标: [{x_pixel}, {y_pixel}]")
+                        self.debug_print(f"UITars extracted pixel coordinates: [{x_pixel}, {y_pixel}]")
                         return [x_pixel, y_pixel]
                 except json.JSONDecodeError:
                     pass
@@ -247,7 +247,7 @@ class UITarsQwen3VLHybridMethod:
             if match:
                 x_pixel = float(match.group(1))
                 y_pixel = float(match.group(2))
-                self.debug_print(f"UITars正则提取坐标: [{x_pixel}, {y_pixel}]")
+                self.debug_print(f"UITars regex-extracted coordinates: [{x_pixel}, {y_pixel}]")
                 return [x_pixel, y_pixel]
 
            
@@ -255,19 +255,19 @@ class UITarsQwen3VLHybridMethod:
             if match:
                 x_pixel = float(match.group(1))
                 y_pixel = float(match.group(2))
-                self.debug_print(f"UITars直接提取坐标: [{x_pixel}, {y_pixel}]")
+                self.debug_print(f"UITars directly extracted coordinates: [{x_pixel}, {y_pixel}]")
                 return [x_pixel, y_pixel]
 
         except Exception as e:
-            self.debug_print(f"UITars坐标解析失败: {e}")
+            self.debug_print(f"UITars coordinate parsing failed: {e}")
 
         return None
 
-    def ground_with_uitars_initial(self, instruction, image):  
-        """第一层: UITars1.5-7b初检"""  
+    def ground_with_uitars_initial(self, instruction, image):
+        """Layer 1: UITars1.5-7b initial detection"""
         input_width, input_height = image.size  
     
-        # 使用smart_resize计算调整后的尺寸  
+        # Use smart_resize to compute adjusted dimensions
         resized_height, resized_width = smart_resize(  
             input_height,  
             input_width,  
@@ -278,7 +278,7 @@ class UITarsQwen3VLHybridMethod:
         )  
         resized_image = image.resize((resized_width, resized_height))  
     
-        self.debug_print(f"图像缩放: {input_width}x{input_height} -> {resized_width}x{resized_height}")  
+        self.debug_print(f"Image resized: {input_width}x{input_height} -> {resized_width}x{resized_height}")
     
  
         prompt = f"""You are a GUI agent. You are given a task and your action history, with screenshots. You need to perform the next action to complete the task.  
@@ -301,10 +301,10 @@ class UITarsQwen3VLHybridMethod:
     
         return pixel_point, response, resized_image
     
-    def parse_uitars_pixel_coordinates_enhanced(self, response_text, image):  
-        """解析UITars返回的像素坐标"""  
-        if not response_text:  
-            self.debug_print("响应为空")  
+    def parse_uitars_pixel_coordinates_enhanced(self, response_text, image):
+        """Parse UITars returned pixel coordinates (enhanced)"""
+        if not response_text:
+            self.debug_print("Response is empty")
             return None  
         
         img_width, img_height = image.size  
@@ -312,43 +312,43 @@ class UITarsQwen3VLHybridMethod:
     
         try:  
              
-            start_box_point = self.extract_start_box_point(response_text)  
+            start_box_point = self.extract_start_box_point(response_text)
             if start_box_point:  
-                self.debug_print(f"提取到start_box/point坐标: {start_box_point}")  
+                self.debug_print(f"Extracted start_box/point coordinates: {start_box_point}")
              
                 new_height, new_width = smart_resize(img_height, img_width)  
-                self.debug_print(f"图像分辨率适配: 原始({img_width}x{img_height}) -> 调整后({new_width}x{new_height})")  
+                self.debug_print(f"Resolution adaptation: original({img_width}x{img_height}) -> adjusted({new_width}x{new_height})")
             
                 x = int(start_box_point[0] / new_width * img_width)  
                 y = int(start_box_point[1] / new_height * img_height)  
                 click_point = [x, y]  
         
             if not click_point:  
-                first_point = self.extract_first_point(response_text)  
+                first_point = self.extract_first_point(response_text)
                 if first_point:  
-                    self.debug_print(f"提取到归一化点坐标: {first_point}")  
+                    self.debug_print(f"Extracted normalized point coordinates: {first_point}")
                     x = int(first_point[0] * img_width)  
                     y = int(first_point[1] * img_height)  
                     click_point = [x, y]  
         
         
             if not click_point:  
-                bbox = self.extract_first_bounding_box(response_text)  
+                bbox = self.extract_first_bounding_box(response_text)
                 if bbox:  
-                    self.debug_print(f"提取到边界框: {bbox}")  
+                    self.debug_print(f"Extracted bounding box: {bbox}")
                     x = int((bbox[0] + bbox[2]) / 2 * img_width)  
                     y = int((bbox[1] + bbox[3]) / 2 * img_height)  
                     click_point = [x, y]  
     
         
-            if click_point:  
+            if click_point:
                 click_point[0] = max(0, min(img_width, click_point[0]))  
                 click_point[1] = max(0, min(img_height, click_point[1]))  
-                self.debug_print(f"最终有效像素坐标: {click_point}")  
+                self.debug_print(f"Final valid pixel coordinates: {click_point}")
                 return click_point  
     
-        except Exception as e:  
-            self.debug_print(f"坐标解析失败: {e}")  
+        except Exception as e:
+            self.debug_print(f"Coordinate parsing failed: {e}")
     
         return None  
    
@@ -376,9 +376,9 @@ class UITarsQwen3VLHybridMethod:
             return [float(match.group(1)), float(match.group(2)), float(match.group(3)), float(match.group(4))]  
         return None
 
-    # ------------------------------ Qwen相关方法 ------------------------------
+    # ------------------------------ Qwen Methods ------------------------------
     def call_dashscope_api(self, messages, model_name, max_retries=3):
-        """调用Dashscope API (Qwen) """
+        """Call Dashscope API (Qwen)"""
         headers = {
             "Authorization": f"Bearer {self.qwen_api_key}",
             "Content-Type": "application/json"
@@ -397,7 +397,7 @@ class UITarsQwen3VLHybridMethod:
                     self.qwen_api_base + "/chat/completions",
                     headers=headers,
                     json=payload,
-                    timeout=120  # 增加超时时间
+                    timeout=120  # increase timeout
                 )
                 response.raise_for_status()
                 result = response.json()
@@ -405,32 +405,32 @@ class UITarsQwen3VLHybridMethod:
 
              
                 if content.strip() == "<tool_call>" or content.strip() == "<tool_call>\n":
-                    self.debug_print(f"检测到空<tool_call>标签 (尝试 {attempt + 1}/{max_retries})")
+                    self.debug_print(f"Empty <tool_call> tag detected (attempt {attempt + 1}/{max_retries})")
                     if attempt < max_retries - 1:
                         time.sleep(2 ** attempt)
                         continue
 
-                self.debug_print(f"Qwen API响应状态: {response.status_code}")
-                self.debug_print(f"Qwen完整响应:\n{content}")
+                self.debug_print(f"Qwen API response status: {response.status_code}")
+                self.debug_print(f"Qwen full response:\n{content}")
                 return content
 
             except Exception as e:
-                self.debug_print(f"Qwen API调用失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+                self.debug_print(f"Qwen API call failed (attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt < max_retries - 1:
                     time.sleep(2 ** attempt)
 
         return None
 
     def parse_normalized_coordinates(self, response, resized_width, resized_height):
-        """解析Dashscope返回的归一化坐标[0-1000]并转换为像素坐标"""
+        """Parse normalized coordinates [0-1000] from Dashscope response and convert to pixel coordinates"""
         if not response:
-            self.debug_print("响应为空")
+            self.debug_print("Response is empty")
             return None
 
         try:
        
             if '<tool_call>' not in response:
-                self.debug_print(f"未找到<tool_call>标签,原始响应: {response[:200]}")
+                self.debug_print(f"No <tool_call> tag found; raw response: {response[:200]}")
             
                 try:
                     
@@ -438,24 +438,24 @@ class UITarsQwen3VLHybridMethod:
                     if coord_match:
                         x_1000 = int(coord_match.group(1))
                         y_1000 = int(coord_match.group(2))
-                        self.debug_print(f"通过回退逻辑提取坐标: [{x_1000}, {y_1000}]")
+                        self.debug_print(f"Extracted coordinates via fallback logic: [{x_1000}, {y_1000}]")
 
                      
                         x_pixel = (x_1000 / 1000.0) * resized_width
                         y_pixel = (y_1000 / 1000.0) * resized_height
-                        self.debug_print(f"归一化坐标: [{x_1000}, {y_1000}] -> 像素坐标: [{x_pixel:.1f}, {y_pixel:.1f}]")
+                        self.debug_print(f"Normalized coordinates: [{x_1000}, {y_1000}] -> Pixel coordinates: [{x_pixel:.1f}, {y_pixel:.1f}]")
                         return [x_pixel, y_pixel]
                     else:
-                        self.debug_print("回退逻辑也无法提取坐标,返回 None")
+                        self.debug_print("Fallback failed to extract coordinates; returning None")
                         return None
                 except Exception as e:
-                    self.debug_print(f"回退逻辑失败: {e}")
+                    self.debug_print(f"Fallback logic failed: {e}")
                     return None
 
        
             tool_match = re.search(r'<tool_call>(.*?)</tool_call>', response, re.DOTALL)
             if not tool_match:
-                self.debug_print("找到<tool_call>标签但无法提取内容")
+                self.debug_print("Found <tool_call> tag but could not extract content")
                 return None
 
             tool_json = tool_match.group(1).strip()
@@ -471,34 +471,34 @@ class UITarsQwen3VLHybridMethod:
                 x_pixel = (x_normalized / 1000.0) * resized_width
                 y_pixel = (y_normalized / 1000.0) * resized_height
 
-                self.debug_print(f"归一化坐标: [{x_normalized}, {y_normalized}] -> 像素坐标: [{x_pixel:.1f}, {y_pixel:.1f}]")
+                self.debug_print(f"Normalized coordinates: [{x_normalized}, {y_normalized}] -> Pixel coordinates: [{x_pixel:.1f}, {y_pixel:.1f}]")
                 return [x_pixel, y_pixel]
 
-            self.debug_print("坐标格式不正确")
+            self.debug_print("Invalid coordinate format")
             return None
 
         except json.JSONDecodeError as e:
-            self.debug_print(f"JSON解析失败: {e}")
+            self.debug_print(f"JSON parse failed: {e}")
            
             try:
                 coord_match = re.search(r'\[(\d+),\s*(\d+)\]', response)
                 if coord_match:
                     x_1000 = int(coord_match.group(1))
                     y_1000 = int(coord_match.group(2))
-                    self.debug_print(f"JSON解析失败,通过正则提取: [{x_1000}, {y_1000}]")
+                    self.debug_print(f"JSON parse failed; extracted via regex: [{x_1000}, {y_1000}]")
                     x_pixel = (x_1000 / 1000.0) * resized_width
                     y_pixel = (y_1000 / 1000.0) * resized_height
                     return [x_pixel, y_pixel]
             except Exception as fallback_e:
-                self.debug_print(f"回退解析也失败: {fallback_e}")
+                self.debug_print(f"Fallback parse also failed: {fallback_e}")
         except Exception as e:
 
-            self.debug_print(f"坐标解析失败: {e}")
+            self.debug_print(f"Coordinate parsing failed: {e}")
             
         return None
 
     def normalize_pixel_coordinates(self, pixel_point, width, height):
-        """将像素坐标归一化到[0,1]范围"""
+        """Normalize pixel coordinates to [0,1] range"""
         if pixel_point is None:
             return None
             
@@ -506,15 +506,15 @@ class UITarsQwen3VLHybridMethod:
             x_pixel, y_pixel = pixel_point
             x_norm = max(0.0, min(1.0, x_pixel / width))
             y_norm = max(0.0, min(1.0, y_pixel / height))
-            self.debug_print(f"归一化: [{x_pixel}, {y_pixel}] -> [{x_norm:.4f}, {y_norm:.4f}]")
+            self.debug_print(f"Normalized: [{x_pixel}, {y_pixel}] -> [{x_norm:.4f}, {y_norm:.4f}]")
             return [x_norm, y_norm]
         except Exception as e:
-            self.debug_print(f"归一化失败: {e}")
+            self.debug_print(f"Normalization failed: {e}")
             return None
 
     def refine_with_qwen_235b(self, instruction, annotated_image, initial_pixel_point, initial_response, is_correct=False):
-        """第二层: Qwen3-VL-235B修正"""
-        self.debug_print("=== 第二层: Qwen3-VL-235B修正 ===")
+        """Layer 2: Qwen3-VL-235B correction"""
+        self.debug_print("=== Layer 2: Qwen3-VL-235B correction ===")
         resized_width, resized_height = annotated_image.size
         
         x_pixel, y_pixel = initial_pixel_point if initial_pixel_point else (resized_width//2, resized_height//2)
@@ -576,7 +576,7 @@ NO explanations. NO text outside tags."""
         ]
         
         refined_response = self.call_dashscope_api(messages, model_name=self.qwen_refine_model)
-        self.debug_print(f"Qwen235B修正响应: {refined_response}")
+        self.debug_print(f"Qwen235B correction response: {refined_response}")
         
         refined_pixel_point = self.parse_normalized_coordinates(refined_response, resized_width, resized_height)
         
@@ -584,34 +584,34 @@ NO explanations. NO text outside tags."""
 
     def refine_with_qwen_32b_final(self, instruction, image, first_pixel_point, second_pixel_point,
                                 first_response, second_response):
-        """第三层: Qwen3-VL-32B最终修正"""
-        self.debug_print("=== 第三层: Qwen3-VL-32B最终修正 ===")
+        """Layer 3: Qwen3-VL-32B final correction"""
+        self.debug_print("=== Layer 3: Qwen3-VL-32B final correction ===")
         resized_width, resized_height = image.size
         
-        # 在原图上同时标注第一层(红色)和第二层(蓝色)
+        # Annotate both Layer 1 (red) and Layer 2 (blue) on original image
         annotated_image = image.copy()
         
-        # 标注第一层结果(红色半透明圈)
+        # Mark Layer 1 result (red semi-transparent circle)
         if first_pixel_point:
             annotated_image = self.plot_annotated_circle(
                 annotated_image,
                 first_pixel_point,
                 radius=100,
-                is_correct=False,  # 红色
+                is_correct=False,  # red
                 alpha=60
             )
         
-        # 标注第二层结果(蓝色方框) 
+        # Mark Layer 2 result (blue box)
         if second_pixel_point:    
             annotated_image = self.plot_annotated_box(    
                 annotated_image,    
                 second_pixel_point,    
-                box_size=100,  # 大方框  
-                is_correct=True,  # 蓝色    
+                box_size=100,  # large box
+                is_correct=True,  # blue
                 alpha=60    
             )
         
-        # 转换两层坐标为0-1000归一化格式
+        # Convert both layers' coordinates to 0–1000 normalized format
         first_x_1000 = int((first_pixel_point[0] / resized_width) * 1000) if first_pixel_point else 500
         first_y_1000 = int((first_pixel_point[1] / resized_height) * 1000) if first_pixel_point else 500
         second_x_1000 = int((second_pixel_point[0] / resized_width) * 1000) if second_pixel_point else 500
@@ -671,7 +671,7 @@ Return ONLY the JSON, no explanation."""
         ]
    
         response = self.call_dashscope_api(messages, model_name=self.qwen_final_model)
-        self.debug_print(f"Qwen32B最终修正响应: {response}")
+        self.debug_print(f"Qwen32B final correction response: {response}")
         
 
         final_pixel_point = self.parse_normalized_coordinates(response, resized_width, resized_height)
@@ -679,10 +679,10 @@ Return ONLY the JSON, no explanation."""
         return final_pixel_point, response
 
     def ground_only_positive(self, instruction, image):
-        """主入口: 三层处理流程"""
+        """Main entry: three-layer processing flow"""
         self.logs = []
         
-        # 加载原始图像
+        # Load original image
         if isinstance(image, str):
             image_path = image
             image = Image.open(image_path).convert('RGB')
@@ -691,7 +691,7 @@ Return ONLY the JSON, no explanation."""
             
         original_width, original_height = image.size
         
-        # 第一层: UITars1.5-7b初检
+        # Layer 1: UITars1.5-7b initial detection
         uitars_pixel_point, uitars_response, resized_image = self.ground_with_uitars_initial(instruction, image)
         resized_width, resized_height = resized_image.size
         
@@ -703,7 +703,7 @@ Return ONLY the JSON, no explanation."""
                 "raw_response": {"uitars_initial": uitars_response, "logs": self.logs}
             }
         
-        # 保存第一层标注图像 - 使用大红色圆圈
+        # Save Layer 1 annotated image - use large red circle
         annotated_layer1 = self.plot_annotated_circle(
             resized_image,
             uitars_pixel_point,
@@ -712,22 +712,22 @@ Return ONLY the JSON, no explanation."""
             alpha=60  
         )
         annotated_layer1.save("layer1_large_red_circle.png")
-        self.debug_print("第一层完成: UITars初检(大红色圆圈标注)")
+        self.debug_print("Layer 1 completed: UITars initial check (large red circle annotation)")
         
-        time.sleep(1)  # 避免API速率限制
+        time.sleep(1)  # Avoid API rate limits
     
-        # 第二层: Qwen3-VL-235B修正 - 在红色圆圈内寻找
+        # Layer 2: Qwen3-VL-235B correction - search within the red circle
         qwen_refine_point, qwen_refine_response = self.refine_with_qwen_235b(
             instruction, annotated_layer1, uitars_pixel_point, uitars_response, is_correct=False
         )
         
-        # 修正失败回退
+        # Fallback on correction failure
         if qwen_refine_point is None:
-            self.debug_print("Qwen235B修正失败, 回退到UITars初检结果")
+            self.debug_print("Qwen235B correction failed; fallback to UITars initial result")
             qwen_refine_point = uitars_pixel_point
         
-        # 保存第二层标注图像 - 在第一层基础上叠加蓝色方框
-        annotated_layer2 = annotated_layer1.copy()  # 保留红色圆圈
+        # Save Layer 2 annotated image - overlay blue box on Layer 1
+        annotated_layer2 = annotated_layer1.copy()  # retain red circle
         annotated_layer2 = self.plot_annotated_box(
             annotated_layer2,
             qwen_refine_point,
@@ -736,20 +736,20 @@ Return ONLY the JSON, no explanation."""
             alpha=60
         )
         annotated_layer2.save("layer2_blue_box_in_red_circle.png")
-        self.debug_print("第二层完成: Qwen235B修正(蓝色方框标注)")
+        self.debug_print("Layer 2 completed: Qwen235B correction (blue box annotation)")
 
-        # 第三层: Qwen3-VL-32B最终修正 - 在蓝色方框内精确定位
+        # Layer 3: Qwen3-VL-32B final correction - precise localization within the blue box
         final_pixel_point, qwen_final_response = self.refine_with_qwen_32b_final(
             instruction, resized_image, uitars_pixel_point, qwen_refine_point,
             uitars_response, qwen_refine_response
         )
         
-        # 第三层失败回退
+        # Fallback on Layer 3 failure
         if final_pixel_point is None:
-            self.debug_print("第三层修正失败, 回退到第二层结果")
+            self.debug_print("Layer 3 correction failed; fallback to Layer 2 result")
             final_pixel_point = qwen_refine_point
         
-        # 保存第三层标注图像 - 显示所有三层结果
+        # Save Layer 3 annotated image - show all three-layer results
         annotated_layer3 = annotated_layer2.copy()  
         annotated_layer3 = self.plot_annotated_circle(
             annotated_layer3,
@@ -759,9 +759,9 @@ Return ONLY the JSON, no explanation."""
             alpha=200
         )
         annotated_layer3.save("layer3_final_precise_point.png")
-        self.debug_print("第三层完成: Qwen32B最终确定(绿色小圆圈标注)")
+        self.debug_print("Layer 3 completed: Qwen32B finalization (small green circle annotation)")
         
-        # 坐标映射回原始图像
+        # Map coordinates back to original image
         scale_x = original_width / resized_width
         scale_y = original_height / resized_height
         final_original_point = [
@@ -769,7 +769,7 @@ Return ONLY the JSON, no explanation."""
             final_pixel_point[1] * scale_y
         ]
         
-        # 归一化到[0,1]
+        # Normalize to [0,1]
         final_normalized_point = self.normalize_pixel_coordinates(
             final_original_point,
             original_width,
@@ -789,5 +789,5 @@ Return ONLY the JSON, no explanation."""
         }
     
     def ground_allow_negative(self, instruction, image):
-        """支持负样本的grounding"""
+        """Support negative sample grounding"""
         return self.ground_only_positive(instruction, image)

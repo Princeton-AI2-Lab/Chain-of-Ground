@@ -1,4 +1,0 @@
-model,avg_development,avg_creative,avg_cad,avg_scientific,avg_office,avg_operating_systems,avg_total
-qwen3-vl-235b,49.9,35.1,32.6,54.8,65.4,42.0,44.8
-qwen3-vl-32b,56.0,44.3,40.4,57.4,68.7,44.6,50.7
-UI-TARS-1.5-7B,32.3,28.5,28.2,41.3,58.8,26.4,34.4

@@ -22,22 +22,22 @@ class Qwen3VL235BMethod:
                 
                  qwen_model="qwen3-vl-235b-a22b-instruct",  
                  qwen_api_base="https://dashscope.aliyuncs.com/compatible-mode/v1"):    
-        """    
-        双层组合模型: Qwen初检(Dashscope) + Qwen修正(Dashscope)  # 描述修改  
-            
-        Args:    
-            uitars_model: 保留原参数（兼容旧调用）  
-            qwen_model: Qwen模型名称(Dashscope格式)  
-            uitars_api_base: 保留原参数（兼容旧调用）  
-            qwen_api_base: Qwen的Dashscope API端点  
-        """    
+        """
+        Two-layer composite model: Qwen initial check (Dashscope) + Qwen correction (Dashscope)
+
+        Args:
+            uitars_model: Keep original parameter (backward compatibility)
+            qwen_model: Qwen model name (Dashscope format)
+            uitars_api_base: Keep original parameter (backward compatibility)
+            qwen_api_base: Dashscope API endpoint for Qwen
+        """
 
         self.qwen_model = qwen_model    
         self.qwen_api_base = qwen_api_base   
           
         self.dashscope_api_key = os.environ.get("DASHSCOPE_API_KEY")  
-        if not self.dashscope_api_key:  
-            raise ValueError("请设置DASHSCOPE_API_KEY环境变量")  
+        if not self.dashscope_api_key:
+            raise ValueError("Please set the DASHSCOPE_API_KEY environment variable")
             
         self.override_generation_config = {    
             "temperature": 0.0,    
@@ -57,8 +57,8 @@ class Qwen3VL235BMethod:
             print(string)  
 
 
-    def call_dashscope_api(self, messages, max_retries=3):  
-        """调用Dashscope API"""  
+    def call_dashscope_api(self, messages, max_retries=3):
+        """Call Dashscope API"""
         headers = {  
             "Authorization": f"Bearer {self.dashscope_api_key}",  
             "Content-Type": "application/json"  
@@ -84,34 +84,34 @@ class Qwen3VL235BMethod:
                 content = result['choices'][0]['message']['content']  
                 
              
-                if content.strip() == "<tool_call>" or content.strip() == "<tool_call>\n":  
-                    self.debug_print(f"检测到空<tool_call>标签 (尝试 {attempt + 1}/{max_retries})")  
+                if content.strip() == "<tool_call>" or content.strip() == "<tool_call>\n":
+                    self.debug_print(f"Empty <tool_call> tag detected (attempt {attempt + 1}/{max_retries})")
                     if attempt < max_retries - 1:  
                         time.sleep(2 ** attempt)  
                         continue  
                 
-                self.debug_print(f"Qwen API响应状态: {response.status_code}")  
-                self.debug_print(f"Qwen完整响应:\n{content}")  
+                self.debug_print(f"Qwen API response status: {response.status_code}")
+                self.debug_print(f"Qwen full response:\n{content}")
                 return content  
                 
-            except Exception as e:  
-                self.debug_print(f"Qwen API调用失败 (尝试 {attempt + 1}/{max_retries}): {e}")  
+            except Exception as e:
+                self.debug_print(f"Qwen API call failed (attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt < max_retries - 1:  
                     time.sleep(2 ** attempt)  
         
         return None  
 
 
-    def parse_normalized_coordinates(self, response, resized_width, resized_height):    
-        """解析Dashscope返回的归一化坐标[0-1000]并转换为像素坐标"""    
-        if not response:    
-            self.debug_print("响应为空")  
+    def parse_normalized_coordinates(self, response, resized_width, resized_height):
+        """Parse Dashscope normalized coordinates [0–1000] and convert to pixel coordinates"""
+        if not response:
+            self.debug_print("Empty response")
             return None    
             
         try:    
            
-            if '<tool_call>' not in response:  
-                self.debug_print(f"未找到<tool_call>标签,原始响应: {response[:200]}")  
+            if '<tool_call>' not in response:
+                self.debug_print(f"No <tool_call> tag found; raw response: {response[:200]}")
                 
                 try:  
                    
@@ -119,24 +119,24 @@ class Qwen3VL235BMethod:
                     if coord_match:  
                         x_1000 = int(coord_match.group(1))  
                         y_1000 = int(coord_match.group(2))  
-                        self.debug_print(f"通过回退逻辑提取坐标: [{x_1000}, {y_1000}]")  
+                        self.debug_print(f"Coordinates extracted via fallback: [{x_1000}, {y_1000}]")
                         
                     
                         x_pixel = (x_1000 / 1000.0) * resized_width    
                         y_pixel = (y_1000 / 1000.0) * resized_height    
-                        self.debug_print(f"归一化坐标: [{x_1000}, {y_1000}] -> 像素坐标: [{x_pixel:.1f}, {y_pixel:.1f}]")  
+                        self.debug_print(f"Normalized coordinates: [{x_1000}, {y_1000}] -> Pixel coordinates: [{x_pixel:.1f}, {y_pixel:.1f}]")
                         return [x_pixel, y_pixel]  
                     else:  
-                        self.debug_print("回退逻辑也无法提取坐标,返回 None")  
+                        self.debug_print("Fallback failed to extract coordinates; returning None")
                         return None  
-                except Exception as e:  
-                    self.debug_print(f"回退逻辑失败: {e}")  
+                except Exception as e:
+                    self.debug_print(f"Fallback logic failed: {e}")
                     return None  
             
          
             tool_match = re.search(r'<tool_call>(.*?)</tool_call>', response, re.DOTALL)  
-            if not tool_match:  
-                self.debug_print("找到<tool_call>标签但无法提取内容")  
+            if not tool_match:
+                self.debug_print("Found <tool_call> tag but could not extract content")
                 return None  
                 
             tool_json = tool_match.group(1).strip()  
@@ -152,34 +152,34 @@ class Qwen3VL235BMethod:
                 x_pixel = (x_normalized / 1000.0) * resized_width    
                 y_pixel = (y_normalized / 1000.0) * resized_height    
                     
-                self.debug_print(f"归一化坐标: [{x_normalized}, {y_normalized}] -> 像素坐标: [{x_pixel:.1f}, {y_pixel:.1f}]")    
+                self.debug_print(f"Normalized coordinates: [{x_normalized}, {y_normalized}] -> Pixel coordinates: [{x_pixel:.1f}, {y_pixel:.1f}]")
                 return [x_pixel, y_pixel]    
                 
-            self.debug_print("坐标格式不正确")    
+            self.debug_print("Invalid coordinate format")
             return None    
                 
-        except json.JSONDecodeError as e:    
-            self.debug_print(f"JSON解析失败: {e}")  
+        except json.JSONDecodeError as e:
+            self.debug_print(f"JSON parse failed: {e}")
        
             try:  
                 coord_match = re.search(r'\[(\d+),\s*(\d+)\]', response)  
                 if coord_match:  
                     x_1000 = int(coord_match.group(1))  
                     y_1000 = int(coord_match.group(2))  
-                    self.debug_print(f"JSON解析失败,通过正则提取: [{x_1000}, {y_1000}]")  
+                    self.debug_print(f"JSON parse failed; extracted via regex: [{x_1000}, {y_1000}]")
                     x_pixel = (x_1000 / 1000.0) * resized_width    
                     y_pixel = (y_1000 / 1000.0) * resized_height  
                     return [x_pixel, y_pixel]  
-            except Exception as fallback_e:  
-                self.debug_print(f"回退解析也失败: {fallback_e}")  
-        except Exception as e:    
-            self.debug_print(f"坐标解析失败: {e}")    
+            except Exception as fallback_e:
+                self.debug_print(f"Fallback parsing failed: {fallback_e}")
+        except Exception as e:
+            self.debug_print(f"Coordinate parsing failed: {e}")
             
         return None 
 
 
-    def normalize_pixel_coordinates(self, pixel_point, width, height):    
-        """将像素坐标归一化到[0,1]范围"""    
+    def normalize_pixel_coordinates(self, pixel_point, width, height):
+        """Normalize pixel coordinates to [0,1] range"""
         if pixel_point is None:    
             return None    
             
@@ -187,15 +187,15 @@ class Qwen3VL235BMethod:
             x_pixel, y_pixel = pixel_point    
             x_norm = max(0.0, min(1.0, x_pixel / width))    
             y_norm = max(0.0, min(1.0, y_pixel / height))    
-            self.debug_print(f"归一化: [{x_pixel}, {y_pixel}] -> [{x_norm:.4f}, {y_norm:.4f}]")    
+            self.debug_print(f"Normalized: [{x_pixel}, {y_pixel}] -> [{x_norm:.4f}, {y_norm:.4f}]")
             return [x_norm, y_norm]    
-        except Exception as e:    
-            self.debug_print(f"归一化失败: {e}")    
+        except Exception as e:
+            self.debug_print(f"Normalization failed: {e}")
             return None
 
 
-    def ground_with_qwen_initial(self, instruction, image):    
-        """第一层: Qwen3-VL初检"""    
+    def ground_with_qwen_initial(self, instruction, image):
+        """Layer 1: Qwen3-VL initial check"""
         input_width, input_height = image.size    
         
       
@@ -208,7 +208,7 @@ class Qwen3VL235BMethod:
         )    
         resized_image = image.resize((resized_width, resized_height))    
         
-        self.debug_print(f"图像缩放: {input_width}x{input_height} -> {resized_width}x{resized_height}")    
+        self.debug_print(f"Image scale: {input_width}x{input_height} -> {resized_width}x{resized_height}")
         
      
         system_message_content = [    
@@ -275,8 +275,8 @@ class Qwen3VL235BMethod:
         return pixel_point, response, resized_image  
 
 
-    def ground_only_positive(self, instruction, image):    
-        """主入口"""    
+    def ground_only_positive(self, instruction, image):
+        """Main entry"""
         self.logs = []    
 
         if isinstance(image, str):    
@@ -287,12 +287,12 @@ class Qwen3VL235BMethod:
             
         original_width, original_height = image.size    
         
-        # 第一层: Qwen3-VL初检  
+        # Layer 1: Qwen3-VL initial check
         qwen_pixel_point, qwen_response, resized_image = self.ground_with_qwen_initial(instruction, image)    
         resized_width, resized_height = resized_image.size    
         
        
-        # 坐标映射回原始图像  
+        # Map coordinates back to original image
         scale_x = original_width / resized_width    
         scale_y = original_height / resized_height    
         final_original_point = [    
@@ -300,7 +300,7 @@ class Qwen3VL235BMethod:
             qwen_pixel_point[1] * scale_y    
         ]    
         
-        # 归一化到[0,1]  
+        # Normalize to [0,1]
         final_normalized_point = self.normalize_pixel_coordinates(    
             final_original_point,     
             original_width,     
@@ -317,6 +317,6 @@ class Qwen3VL235BMethod:
             }    
         }
     
-    def ground_allow_negative(self, instruction, image):  
-        """支持负样本的grounding"""  
+    def ground_allow_negative(self, instruction, image):
+        """Grounding with support for negative samples"""
         return self.ground_only_positive(instruction, image)  

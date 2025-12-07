@@ -83,21 +83,21 @@ class UITarsSingleMethod:
                  http_referer=None,
                  x_title=None):  
         """
-        双层UI-TARS自我修正模型: UI-TARS初检 + UI-TARS修正  
-        
-        Args:  
-            uitars_model: UI-TARS模型名称  
-            api_base: OpenRouter API端点  
-            http_referer: 可选 
-            x_title: 可选
-        """  
+        Two-layer UI-TARS self-correction model: UI-TARS initial check + UI-TARS correction
+
+        Args:
+            uitars_model: UI-TARS model name
+            api_base: OpenRouter API endpoint
+            http_referer: Optional
+            x_title: Optional
+        """
         self.uitars_model = uitars_model  
         self.api_base = api_base   
           
     
         self.api_key = os.environ.get("OPENROUTER_API_KEY")  
-        if not self.api_key:  
-            raise ValueError("请设置OPENROUTER_API_KEY环境变量")  
+        if not self.api_key:
+            raise ValueError("Please set the OPENROUTER_API_KEY environment variable")
           
         self.client = OpenAI(
             base_url=self.api_base,
@@ -120,13 +120,13 @@ class UITarsSingleMethod:
         self.debug_flag = True
 
       
-    def load_model(self):  
-        """加载模型"""  
-        pass  
+    def load_model(self):
+        """Load model"""
+        pass
       
-    def set_generation_config(self, **kwargs):  
-        """设置生成配置"""
-        # 禁止传入max_new_tokens，替换为max_tokens
+    def set_generation_config(self, **kwargs):
+        """Set generation config"""
+        # Disallow passing max_new_tokens; replace with max_tokens
         if "max_new_tokens" in kwargs:
             
             kwargs["max_tokens"] = kwargs.pop("max_new_tokens")
@@ -134,8 +134,8 @@ class UITarsSingleMethod:
         supported_params = ["temperature", "top_p", "max_tokens", "stop", "n"]
         filtered_kwargs = {k: v for k, v in kwargs.items() if k in supported_params}
         
-        self.override_generation_config.update(filtered_kwargs)  
-        self.debug_print(f"更新生成配置: {self.override_generation_config}")
+        self.override_generation_config.update(filtered_kwargs)
+        self.debug_print(f"Updated generation config: {self.override_generation_config}")
       
     def debug_print(self, string):  
         self.logs.append(string)  
@@ -143,7 +143,7 @@ class UITarsSingleMethod:
             print(string)  
 
     def call_uitars_api(self, prompt, image, is_allow_negative=False):
-        """调用OpenRouter的UI-TARS API"""
+        """Call OpenRouter UI-TARS API"""
         if isinstance(image, str):
             image = Image.open(image).convert('RGB')
         
@@ -191,27 +191,27 @@ class UITarsSingleMethod:
                 if content is not None:
                     response_text += content
                     print(content, end='', flush=True)
-            self.debug_print(f"\nOpenRouter API响应完成: {response_text}")
+            self.debug_print(f"\nOpenRouter API response completed: {response_text}")
             return response_text
 
         except TypeError as e:
            
             if "unexpected keyword argument 'max_new_tokens'" in str(e):
-                error_msg = "错误:OpenRouter API不支持max_new_tokens参数,请使用max_tokens替代!"
+                error_msg = "Error: OpenRouter API does not support max_new_tokens; use max_tokens instead!"
                 self.debug_print(error_msg)
                 raise ValueError(error_msg) from e
             else:
-                self.debug_print(f"OpenRouter调用失败: {e}")
+                self.debug_print(f"OpenRouter call failed: {e}")
                 return None
         except BadRequestError as e:
-            self.debug_print(f"OpenRouter调用失败: {e}")
+            self.debug_print(f"OpenRouter call failed: {e}")
             return None
         except Exception as e:
-            self.debug_print(f"OpenRouter调用失败: {e}")
+            self.debug_print(f"OpenRouter call failed: {e}")
             return None
 
     def parse_pixel_coordinates_raw(self, response_text, image):
-        """解析像素坐标"""
+        """Parse pixel coordinates"""
         if not response_text:
             return None
         
@@ -222,10 +222,10 @@ class UITarsSingleMethod:
             
             start_box_point = extract_start_box_point(response_text)
             if start_box_point:
-                self.debug_print(f"提取到start_box/point坐标: {start_box_point}")
+                self.debug_print(f"Extracted start_box/point coordinates: {start_box_point}")
                
                 new_height, new_width = smart_resize(img_height, img_width)
-                self.debug_print(f"图像分辨率适配: 原始({img_width}x{img_height}) -> 调整后({new_width}x{new_height})")
+                self.debug_print(f"Image resolution adaptation: original ({img_width}x{img_height}) -> resized ({new_width}x{new_height})")
                
                 x = int(start_box_point[0] / new_width * img_width)
                 y = int(start_box_point[1] / new_height * img_height)
@@ -235,7 +235,7 @@ class UITarsSingleMethod:
             if not click_point:
                 first_point = extract_first_point(response_text)
                 if first_point:
-                    self.debug_print(f"提取到归一化点坐标: {first_point}")
+                    self.debug_print(f"Extracted normalized point: {first_point}")
                 
                     x = int(first_point[0] * img_width)
                     y = int(first_point[1] * img_height)
@@ -245,7 +245,7 @@ class UITarsSingleMethod:
             if not click_point:
                 bbox = extract_first_bounding_box(response_text)
                 if bbox:
-                    self.debug_print(f"提取到边界框: {bbox}")
+                    self.debug_print(f"Extracted bounding box: {bbox}")
               
                     x = int((bbox[0] + bbox[2]) / 2 * img_width)
                     y = int((bbox[1] + bbox[3]) / 2 * img_height)
@@ -255,16 +255,16 @@ class UITarsSingleMethod:
             if click_point:
                 click_point[0] = max(0, min(img_width, click_point[0]))
                 click_point[1] = max(0, min(img_height, click_point[1]))
-                self.debug_print(f"最终有效像素坐标: {click_point}")
+                self.debug_print(f"Final valid pixel coordinates: {click_point}")
                 return click_point
 
         except Exception as e:
-            self.debug_print(f"坐标解析失败: {e}")
+            self.debug_print(f"Coordinate parsing failed: {e}")
     
         return None
 
-    def normalize_pixel_coordinates(self, pixel_point, width, height):  
-        """将像素坐标归一化到 [0,1] 范围"""  
+    def normalize_pixel_coordinates(self, pixel_point, width, height):
+        """Normalize pixel coordinates to [0,1] range"""
         if pixel_point is None:  
             return None  
           
@@ -272,14 +272,14 @@ class UITarsSingleMethod:
             x_pixel, y_pixel = pixel_point  
             x_norm = max(0.0, min(1.0, x_pixel / width))  
             y_norm = max(0.0, min(1.0, y_pixel / height))  
-            self.debug_print(f"坐标归一化: [{x_pixel}, {y_pixel}] -> [{x_norm:.4f}, {y_norm:.4f}]")  
+            self.debug_print(f"Normalized: [{x_pixel}, {y_pixel}] -> [{x_norm:.4f}, {y_norm:.4f}]")
             return [x_norm, y_norm]  
-        except Exception as e:  
-            self.debug_print(f"归一化失败: {e}")  
+        except Exception as e:
+            self.debug_print(f"Normalization failed: {e}")
             return None  
 
     def ground_with_uitars_initial(self, instruction, image):
-        """第一层: UI-TARS初检"""
+        """Layer 1: UI-TARS initial check"""
         width, height = image.size  
         
         prompt = f"""You are a GUI agent. You are given a task and your action history, with screenshots. You need to perform the next action to complete the task.
@@ -302,8 +302,8 @@ click(point='<point>x1 y1</point>'')
         return pixel_point, response
 
     
-    def ground_only_positive(self, instruction, image):    
-        """主入口: 单层UI-TARS"""    
+    def ground_only_positive(self, instruction, image):
+        """Main entry: single-layer UI-TARS"""
         self.logs = []    
         
         if isinstance(image, str):    
@@ -321,7 +321,7 @@ click(point='<point>x1 y1</point>'')
                 "raw_response": {"uitars_initial": uitars_initial_response, "logs": self.logs}    
             }    
         
-        # 归一化初检结果
+        # Normalize initial check result
         final_normalized_point = self.normalize_pixel_coordinates(uitars_pixel_point, width, height)    
         
         return {    
@@ -334,8 +334,8 @@ click(point='<point>x1 y1</point>'')
             }    
         }
       
-    def ground_allow_negative(self, instruction, image):  
-        """支持负样本的grounding"""  
+    def ground_allow_negative(self, instruction, image):
+        """Grounding with support for negative samples"""
         self.logs = []    
         
         if isinstance(image, str):    
@@ -343,19 +343,19 @@ click(point='<point>x1 y1</point>'')
         
         width, height = image.size  
 
-        # 负样本专用提示词
+        # Prompt specialized for negative samples
         prompt = f"""You are a GUI agent. You are given a task and your action history, with screenshots. You need to perform the next action to complete the task.
 Don't output any analysis. Output your result in the format of [[x0,y0,x1,y1]], with x and y ranging from 0 to 1.
 If such element does not exist, output only the text 'Target not existent'.
 The instruction is:
 {instruction}"""
 
-        # 调用OpenRouter API（允许负样本判断）
+        # Call OpenRouter API (allow negative sample judgment)
         response = self.call_uitars_api(prompt, image, is_allow_negative=True)
         
-        # 检查负样本标识（不区分大小写）
+        # Check negative sample indicator (case-insensitive)
         if response and "target not existent" in response.lower():
-            self.debug_print("检测到负样本: 目标元素不存在")
+            self.debug_print("Negative sample detected: target element does not exist")
             return {
                 "result": "negative",
                 "point": None,
@@ -363,7 +363,7 @@ The instruction is:
                 "raw_response": {"uitars_initial": response, "logs": self.logs}
             }
 
-        # 解析坐标
+        # Parse coordinates
         pixel_point = self.parse_pixel_coordinates_raw(response, image)  
         if pixel_point is None:    
             return {    
@@ -373,7 +373,7 @@ The instruction is:
                 "raw_response": {"uitars_initial": response, "logs": self.logs}    
             }  
 
-        # 归一化坐标
+        # Normalize coordinates
         final_normalized_point = self.normalize_pixel_coordinates(pixel_point, width, height)    
         return {    
             "result": "positive" if final_normalized_point else "negative",    

@@ -389,10 +389,10 @@ def main(args):
     print(f"Total tasks: {len(tasks_to_run)}")
 
  
-    VISUALIZE_FIRST_N = 100  
-    vis_count = 0  
-    vis_dir = f"./visualizations_{args.model_type}"   
-    os.makedirs(vis_dir, exist_ok=True) 
+    VISUALIZE_FIRST_N = 100
+    vis_count = 0
+    vis_dir = f"./visualizations_{args.model_type}"
+    os.makedirs(vis_dir, exist_ok=True)
 
     results = []
     for sample in tqdm(tasks_to_run):
@@ -435,62 +435,60 @@ def main(args):
         point = response["point"]
         img_size = sample["img_size"]
         point_in_pixel = [point[0] * img_size[0], point[1] * img_size[1]] if point else None
+        # Critical fix: compute correctness first
+        if sample["gt_type"] == "positive":
+            correctness = eval_sample_positive_gt(sample, response)
+        elif sample["gt_type"] == "negative":
+            correctness = eval_sample_negative_gt(sample, response)
+        else:
+            correctness = "wrong_format"
 
-         # ===== 关键修正: 先计算 correctness =====  
-        if sample["gt_type"] == "positive":  
-            correctness = eval_sample_positive_gt(sample, response)  
-        elif sample["gt_type"] == "negative":  
-            correctness = eval_sample_negative_gt(sample, response)  
-        else:  
-            correctness = "wrong_format"  
-        # ===== correctness 计算完成 =====
+        # Add real-time visualization logic
+        if vis_count < VISUALIZE_FIRST_N and sample["gt_type"] == "positive" and point:
+            # Load image
+            img = Image.open(img_path)
+            img_width, img_height = img.size
 
-        # ===== 添加实时可视化逻辑 =====  
-        if vis_count < VISUALIZE_FIRST_N and sample["gt_type"] == "positive" and point:  
-            # 加载图像  
-            img = Image.open(img_path)  
-            img_width, img_height = img.size  
-              
-            # 创建图形  
-            fig, ax = plt.subplots(1, figsize=(12, 8))  
-            ax.imshow(img)  
-              
-            # 绘制真实边界框(绿色)  
-            bbox = sample["bbox"]  
-            rect = patches.Rectangle(  
-                (bbox[0], bbox[1]),   
-                bbox[2] - bbox[0],   
-                bbox[3] - bbox[1],  
-                linewidth=3,   
-                edgecolor='green',   
-                facecolor='none',  
-                label='Ground Truth'  
-            )  
-            ax.add_patch(rect)  
-              
-            # 绘制预测点(蓝色=正确,红色=错误)  
-            pred_x, pred_y = point_in_pixel  
-            color = 'blue' if correctness == 'correct' else 'red'  
-            ax.plot(pred_x, pred_y, 'o', color=color, markersize=12,   
-                   label=f'Prediction ({correctness})')  
-              
-            # 添加标题  
-            title = f"Sample {vis_count + 1}/{VISUALIZE_FIRST_N}\n"  
-            title += f"App: {sample['application']} | Platform: {sample['platform']}\n"  
-            title += f"Instruction: {sample['prompt_to_evaluate'][:80]}...\n"  
-            title += f"Correctness: {correctness}"  
-            ax.set_title(title, fontsize=10)  
-            ax.legend()  
-            ax.axis('off')  
-              
-            # 保存可视化结果  
-            plt.savefig(f"{vis_dir}/sample_{vis_count:04d}_{correctness}.png",   
-                       bbox_inches='tight', dpi=100)  
-            plt.close()  
-              
-            print(f"\n[可视化] 已保存第 {vis_count + 1} 个样本到 {vis_dir}/")  
-            vis_count += 1  
-        # ===== 可视化逻辑结束 ===== 
+            # Create figure
+            fig, ax = plt.subplots(1, figsize=(12, 8))
+            ax.imshow(img)
+
+            # Draw ground-truth bbox (green)
+            bbox = sample["bbox"]
+            rect = patches.Rectangle(
+                (bbox[0], bbox[1]),
+                bbox[2] - bbox[0],
+                bbox[3] - bbox[1],
+                linewidth=3,
+                edgecolor='green',
+                facecolor='none',
+                label='Ground Truth'
+            )
+            ax.add_patch(rect)
+
+            # Draw prediction (blue=correct, red=wrong)
+            pred_x, pred_y = point_in_pixel
+            color = 'blue' if correctness == 'correct' else 'red'
+            ax.plot(pred_x, pred_y, 'o', color=color, markersize=12,
+                   label=f'Prediction ({correctness})')
+
+            # Add title
+            title = f"Sample {vis_count + 1}/{VISUALIZE_FIRST_N}\n"
+            title += f"App: {sample['application']} | Platform: {sample['platform']}\n"
+            title += f"Instruction: {sample['prompt_to_evaluate'][:80]}...\n"
+            title += f"Correctness: {correctness}"
+            ax.set_title(title, fontsize=10)
+            ax.legend()
+            ax.axis('off')
+
+            # Save visualization
+            plt.savefig(f"{vis_dir}/sample_{vis_count:04d}_{correctness}.png",
+                       bbox_inches='tight', dpi=100)
+            plt.close()
+
+            print(f"\n[Visualization] Saved sample {vis_count + 1} to {vis_dir}/")
+            vis_count += 1
+        # End visualization logic
         
         sample_result = {
             "id": sample["id"],

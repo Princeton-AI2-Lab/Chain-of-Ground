@@ -23,21 +23,21 @@ class Qwen3VLTripleMethod:
              qwen_model="qwen3-vl-32b-instruct",  
              qwen_refine_model="qwen3-vl-235b-a22b-instruct",   
              qwen_api_base="https://dashscope.aliyuncs.com/compatible-mode/v1"):  
-        """      
-        三层组合模型: 32B初检 -> 235B修正 -> 32B最终定位
-        
-        Args:      
-            qwen_model: 初检和最终定位使用的模型 (此处为32B)
-            qwen_refine_model: 中间修正使用的强模型 (此处为235B)
-            qwen_api_base: Qwen的Dashscope API端点    
-        """      
+        """
+        Three-layer composite model: 32B initial detection → 235B refinement → 32B final localization
+
+        Args:
+            qwen_model: Model used for initial and final stages (32B)
+            qwen_refine_model: Strong model used for middle refinement (235B)
+            qwen_api_base: Dashscope API endpoint for Qwen
+        """
         self.qwen_model = qwen_model  
         self.qwen_refine_model = qwen_refine_model  
         self.qwen_api_base = qwen_api_base   
           
         self.dashscope_api_key = os.environ.get("DASHSCOPE_API_KEY")  
-        if not self.dashscope_api_key:  
-            raise ValueError("请设置DASHSCOPE_API_KEY环境变量")  
+        if not self.dashscope_api_key:
+            raise ValueError("Please set DASHSCOPE_API_KEY environment variable")
             
         self.override_generation_config = {    
             "temperature": 0.0,    
@@ -47,20 +47,20 @@ class Qwen3VLTripleMethod:
         self.logs = []    
         self.debug_flag = True  
 
-    def plot_annotated_box(self, image, point, box_size=100, is_correct=None, alpha=80):  
-        """在图片上标注预测点 - 使用半透明方框"""  
+    def plot_annotated_box(self, image, point, box_size=100, is_correct=None, alpha=80):
+        """Annotate predicted point on image with semi-transparent box"""
         overlay = Image.new('RGBA', image.size, (255, 255, 255, 0))  
         draw = ImageDraw.Draw(overlay)  
         
         if point is not None:  
             x, y = point  
             
-            if is_correct:  
-                color = (0, 0, 255, alpha)  # 蓝色  
-            else:  
-                color = (255, 0, 0, alpha)  # 红色  
+            if is_correct:
+                color = (0, 0, 255, alpha)  # blue
+            else:
+                color = (255, 0, 0, alpha)  # red
             
-            # 绘制方框 (中心点为point)  
+            # Draw box (centered at point)
             half_size = box_size // 2  
             draw.rectangle(  
                 (x - half_size, y - half_size, x + half_size, y + half_size),  
@@ -72,18 +72,18 @@ class Qwen3VLTripleMethod:
         annotated_image = Image.alpha_composite(annotated_image, overlay)  
         return annotated_image.convert('RGB')
 
-    def plot_annotated_circle(self, image, point, radius=15, is_correct=None, alpha=100):    
-        """在图片上标注预测点 - 使用半透明实心圆"""    
+    def plot_annotated_circle(self, image, point, radius=15, is_correct=None, alpha=100):
+        """Annotate predicted point on image with semi-transparent solid circle"""
         overlay = Image.new('RGBA', image.size, (255, 255, 255, 0))    
         draw = ImageDraw.Draw(overlay)    
           
         if point is not None:    
             x, y = point    
               
-            if is_correct:    
-                color = (0, 0, 255, alpha)  # 蓝色  
-            else:    
-                color = (255, 0, 0, alpha)  # 红色  
+            if is_correct:
+                color = (0, 0, 255, alpha)  # blue
+            else:
+                color = (255, 0, 0, alpha)  # red
               
             draw.ellipse(    
                 (x - radius, y - radius, x + radius, y + radius),    
@@ -95,8 +95,8 @@ class Qwen3VLTripleMethod:
         annotated_image = Image.alpha_composite(annotated_image, overlay)    
         return annotated_image.convert('RGB')   
         
-    def load_model(self):    
-        """加载模型(API调用无需实际加载)"""    
+    def load_model(self):
+        """Load model (API calls do not require actual loading)"""
         pass    
         
     def set_generation_config(self, **kwargs):    
@@ -108,8 +108,8 @@ class Qwen3VLTripleMethod:
             print(string)  
 
 
-    def call_dashscope_api(self, messages, model_name=None, max_retries=3):  
-        """调用Dashscope API (Qwen)"""  
+    def call_dashscope_api(self, messages, model_name=None, max_retries=3):
+        """Call Dashscope API (Qwen)"""
         headers = {  
             "Authorization": f"Bearer {self.dashscope_api_key}",  
             "Content-Type": "application/json"  
@@ -135,34 +135,34 @@ class Qwen3VLTripleMethod:
                 content = result['choices'][0]['message']['content']  
                 
               
-                if content.strip() == "<tool_call>" or content.strip() == "<tool_call>\n":  
-                    self.debug_print(f"检测到空<tool_call>标签 (尝试 {attempt + 1}/{max_retries})")  
+                if content.strip() == "<tool_call>" or content.strip() == "<tool_call>\n":
+                    self.debug_print(f"Empty <tool_call> tag detected (attempt {attempt + 1}/{max_retries})")
                     if attempt < max_retries - 1:  
                         time.sleep(2 ** attempt)  
                         continue  
                 
-                self.debug_print(f"Qwen API响应状态: {response.status_code}")  
-                self.debug_print(f"Qwen完整响应:\n{content}")  
+                self.debug_print(f"Qwen API response status: {response.status_code}")
+                self.debug_print(f"Qwen full response:\n{content}")
                 return content  
                 
-            except Exception as e:  
-                self.debug_print(f"Qwen API调用失败 (尝试 {attempt + 1}/{max_retries}): {e}")  
+            except Exception as e:
+                self.debug_print(f"Qwen API call failed (attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt < max_retries - 1:  
                     time.sleep(2 ** attempt)  
         
         return None  
 
 
-    def parse_normalized_coordinates(self, response, resized_width, resized_height):    
-        """解析Dashscope返回的归一化坐标[0-1000]并转换为像素坐标"""    
-        if not response:    
-            self.debug_print("响应为空")  
+    def parse_normalized_coordinates(self, response, resized_width, resized_height):
+        """Parse normalized coordinates [0-1000] from Dashscope response and convert to pixel coordinates"""
+        if not response:
+            self.debug_print("Response is empty")
             return None    
             
         try:    
            
-            if '<tool_call>' not in response:  
-                self.debug_print(f"未找到<tool_call>标签,原始响应: {response[:200]}")  
+            if '<tool_call>' not in response:
+                self.debug_print(f"No <tool_call> tag found; raw response: {response[:200]}")
               
                 try:  
                   
@@ -170,24 +170,24 @@ class Qwen3VLTripleMethod:
                     if coord_match:  
                         x_1000 = int(coord_match.group(1))  
                         y_1000 = int(coord_match.group(2))  
-                        self.debug_print(f"通过回退逻辑提取坐标: [{x_1000}, {y_1000}]")  
+                        self.debug_print(f"Extracted coordinates via fallback logic: [{x_1000}, {y_1000}]")
                         
                     
-                        x_pixel = (x_1000 / 1000.0) * resized_width    
-                        y_pixel = (y_1000 / 1000.0) * resized_height    
-                        self.debug_print(f"归一化坐标: [{x_1000}, {y_1000}] -> 像素坐标: [{x_pixel:.1f}, {y_pixel:.1f}]")  
+                        x_pixel = (x_1000 / 1000.0) * resized_width
+                        y_pixel = (y_1000 / 1000.0) * resized_height
+                        self.debug_print(f"Normalized coordinates: [{x_1000}, {y_1000}] -> Pixel coordinates: [{x_pixel:.1f}, {y_pixel:.1f}]")
                         return [x_pixel, y_pixel]  
                     else:  
-                        self.debug_print("回退逻辑也无法提取坐标,返回 None")  
+                        self.debug_print("Fallback failed to extract coordinates; returning None")
                         return None  
-                except Exception as e:  
-                    self.debug_print(f"回退逻辑失败: {e}")  
+                except Exception as e:
+                    self.debug_print(f"Fallback logic failed: {e}")
                     return None  
             
         
-            tool_match = re.search(r'<tool_call>(.*?)</tool_call>', response, re.DOTALL)  
-            if not tool_match:  
-                self.debug_print("找到<tool_call>标签但无法提取内容")  
+            tool_match = re.search(r'<tool_call>(.*?)</tool_call>', response, re.DOTALL)
+            if not tool_match:
+                self.debug_print("Found <tool_call> tag but could not extract content")
                 return None  
                 
             tool_json = tool_match.group(1).strip()  
@@ -200,37 +200,37 @@ class Qwen3VLTripleMethod:
                 y_normalized = float(coords[1])    
                     
                 
-                x_pixel = (x_normalized / 1000.0) * resized_width    
-                y_pixel = (y_normalized / 1000.0) * resized_height    
-                    
-                self.debug_print(f"归一化坐标: [{x_normalized}, {y_normalized}] -> 像素坐标: [{x_pixel:.1f}, {y_pixel:.1f}]")    
+                x_pixel = (x_normalized / 1000.0) * resized_width
+                y_pixel = (y_normalized / 1000.0) * resized_height
+
+                self.debug_print(f"Normalized coordinates: [{x_normalized}, {y_normalized}] -> Pixel coordinates: [{x_pixel:.1f}, {y_pixel:.1f}]")
                 return [x_pixel, y_pixel]    
                 
-            self.debug_print("坐标格式不正确")    
+            self.debug_print("Invalid coordinate format")
             return None    
                 
-        except json.JSONDecodeError as e:    
-            self.debug_print(f"JSON解析失败: {e}")  
+        except json.JSONDecodeError as e:
+            self.debug_print(f"JSON parse failed: {e}")
      
             try:  
                 coord_match = re.search(r'\[(\d+),\s*(\d+)\]', response)  
                 if coord_match:  
                     x_1000 = int(coord_match.group(1))  
                     y_1000 = int(coord_match.group(2))  
-                    self.debug_print(f"JSON解析失败,通过正则提取: [{x_1000}, {y_1000}]")  
+                    self.debug_print(f"JSON parse failed; extracted via regex: [{x_1000}, {y_1000}]")
                     x_pixel = (x_1000 / 1000.0) * resized_width    
                     y_pixel = (y_1000 / 1000.0) * resized_height  
                     return [x_pixel, y_pixel]  
-            except Exception as fallback_e:  
-                self.debug_print(f"回退解析也失败: {fallback_e}")  
-        except Exception as e:    
-            self.debug_print(f"坐标解析失败: {e}")    
+            except Exception as fallback_e:
+                self.debug_print(f"Fallback parse also failed: {fallback_e}")
+        except Exception as e:
+            self.debug_print(f"Coordinate parsing failed: {e}")
             
         return None 
 
 
-    def normalize_pixel_coordinates(self, pixel_point, width, height):    
-        """将像素坐标归一化到[0,1]范围"""    
+    def normalize_pixel_coordinates(self, pixel_point, width, height):
+        """Normalize pixel coordinates to [0,1] range"""
         if pixel_point is None:    
             return None    
             
@@ -238,15 +238,15 @@ class Qwen3VLTripleMethod:
             x_pixel, y_pixel = pixel_point    
             x_norm = max(0.0, min(1.0, x_pixel / width))    
             y_norm = max(0.0, min(1.0, y_pixel / height))    
-            self.debug_print(f"归一化: [{x_pixel}, {y_pixel}] -> [{x_norm:.4f}, {y_norm:.4f}]")    
+            self.debug_print(f"Normalized: [{x_pixel}, {y_pixel}] -> [{x_norm:.4f}, {y_norm:.4f}]")
             return [x_norm, y_norm]    
-        except Exception as e:    
-            self.debug_print(f"归一化失败: {e}")    
+        except Exception as e:
+            self.debug_print(f"Normalization failed: {e}")
             return None
 
 
-    def ground_with_qwen_initial(self, instruction, image):    
-        """第一层: Qwen3-VL-32B 初检"""    
+    def ground_with_qwen_initial(self, instruction, image):
+        """Layer 1: Qwen3-VL-32B initial detection"""
         input_width, input_height = image.size    
         
      
@@ -259,7 +259,7 @@ class Qwen3VLTripleMethod:
         )    
         resized_image = image.resize((resized_width, resized_height))    
         
-        self.debug_print(f"图像缩放: {input_width}x{input_height} -> {resized_width}x{resized_height}")    
+        self.debug_print(f"Image resized: {input_width}x{input_height} -> {resized_width}x{resized_height}")
         
       
         system_message_content = [    
@@ -327,9 +327,9 @@ class Qwen3VLTripleMethod:
         return pixel_point, response, resized_image  
 
 
-    def refine_with_qwen(self, instruction, annotated_image, initial_pixel_point, initial_response, is_correct=False):          
-        """第二层: Qwen3-VL-235B 修正"""          
-        self.debug_print("=== 第二层: Qwen3-VL-235B 修正 ===")          
+    def refine_with_qwen(self, instruction, annotated_image, initial_pixel_point, initial_response, is_correct=False):
+        """Layer 2: Qwen3-VL-235B correction"""
+        self.debug_print("=== Layer 2: Qwen3-VL-235B correction ===")
         resized_width, resized_height = annotated_image.size  
         
         x_pixel, y_pixel = initial_pixel_point if initial_pixel_point else (resized_width//2, resized_height//2)          
@@ -391,38 +391,38 @@ NO explanations. NO text outside tags."""
         ]          
         
        
-        refined_response = self.call_dashscope_api(messages, model_name=self.qwen_refine_model)          
-        self.debug_print(f"Qwen-235B修正响应: {refined_response}")          
+        refined_response = self.call_dashscope_api(messages, model_name=self.qwen_refine_model)
+        self.debug_print(f"Qwen-235B correction response: {refined_response}")
         
         refined_pixel_point = self.parse_normalized_coordinates(refined_response, resized_width, resized_height)          
         
         return refined_pixel_point, refined_response
     
-    def refine_with_final_stage(self, instruction, image, first_pixel_point, second_pixel_point,     
-                                first_response, second_response):    
-        """第三层: Qwen3-VL-32B 最终修正"""    
-        self.debug_print("=== 第三层: Qwen3-VL-32B 最终修正 ===")    
+    def refine_with_final_stage(self, instruction, image, first_pixel_point, second_pixel_point,
+                                first_response, second_response):
+        """Layer 3: Qwen3-VL-32B final correction"""
+        self.debug_print("=== Layer 3: Qwen3-VL-32B final correction ===")
         resized_width, resized_height = image.size    
           
         annotated_image = image.copy()    
         
-        # 标注第一层结果(红色半透明圈)    
+        # Mark Layer 1 result (red semi-transparent circle)
         if first_pixel_point:    
             annotated_image = self.plot_annotated_circle(    
                 annotated_image,    
                 first_pixel_point,    
-                radius=100,    
-                is_correct=False,  # 红色    
+                radius=100,
+                is_correct=False,  # red
                 alpha=60    
             )    
         
-        # 标注第二层结果(蓝色方框) 
+        # Mark Layer 2 result (blue box)
         if second_pixel_point:    
             annotated_image = self.plot_annotated_box(    
                 annotated_image,    
                 second_pixel_point,    
-                box_size=100,   
-                is_correct=True,  # 蓝色    
+                box_size=100,
+                is_correct=True,  # blue
                 alpha=60    
             )   
         
@@ -487,18 +487,18 @@ Return ONLY the JSON, no explanation."""
         ]    
         
         
-        response = self.call_dashscope_api(messages, model_name=self.qwen_model)    
-        self.debug_print(f"Qwen-32B最终修正响应: {response}")    
+        response = self.call_dashscope_api(messages, model_name=self.qwen_model)
+        self.debug_print(f"Qwen-32B final correction response: {response}")
       
         final_pixel_point = self.parse_normalized_coordinates(response, resized_width, resized_height)    
         
         return final_pixel_point, response
 
-    def ground_only_positive(self, instruction, image):      
-        """主入口"""      
+    def ground_only_positive(self, instruction, image):
+        """Main entry"""
         self.logs = []      
         
-        # 加载原始图像    
+        # Load original image
         if isinstance(image, str):      
             image_path = image      
             image = Image.open(image_path).convert('RGB')      
@@ -507,7 +507,7 @@ Return ONLY the JSON, no explanation."""
             
         original_width, original_height = image.size      
         
-        # 第一层: Qwen3-VL-32B 初检  
+        # Layer 1: Qwen3-VL-32B initial detection
         qwen_pixel_point, qwen_response, resized_image = self.ground_with_qwen_initial(instruction, image)  
         resized_width, resized_height = resized_image.size  
         
@@ -519,69 +519,69 @@ Return ONLY the JSON, no explanation."""
                 "raw_response": {"qwen_initial": qwen_response, "logs": self.logs}  
             }  
         
-        # 保存第一层标注图像 - 使用大红色圆圈
+        # Save Layer 1 annotated image - use large red circle
         annotated_layer1 = self.plot_annotated_circle(  
             resized_image,  
             qwen_pixel_point,  
-            radius=100,  # 增大半径  
-            is_correct=False,  # 红色  
+            radius=100,  # larger radius
+            is_correct=False,  # red
             alpha=60  
         )  
         annotated_layer1.save("layer1_large_red_circle.png")  
-        self.debug_print("第一层完成: 大红色圆圈标注 (32B)")      
+        self.debug_print("Layer 1 completed: large red circle annotation (32B)")
         
-        time.sleep(1)  # 避免API速率限制      
+        time.sleep(1)  # Avoid API rate limits
     
-        # 第二层: Qwen3-VL-235B 修正 - 在红色圆圈内寻找  
+        # Layer 2: Qwen3-VL-235B correction - search within red circle
         final_pixel_point, qwen_refined_response = self.refine_with_qwen(  
             instruction, annotated_layer1, qwen_pixel_point, qwen_response, is_correct=False  
         )  
         
-        # 修正失败回退  
+        # Fallback on correction failure
         if final_pixel_point is None:  
-            self.debug_print("Qwen-235B修正失败, 回退到初检结果")  
+            self.debug_print("Qwen-235B correction failed; fallback to initial result")
             final_pixel_point = qwen_pixel_point  
         
-        # 保存第二层标注图像 - 在第一层基础上叠加蓝色方框  
+        # Save Layer 2 annotated image - overlay blue box on Layer 1
         annotated_layer2 = annotated_layer1.copy()  
         annotated_layer2 = self.plot_annotated_box(  
             annotated_layer2,  
             final_pixel_point,  
-            box_size=100,  # 大方框  
-            is_correct=True,  # 蓝色  
+            box_size=100,  # large box
+            is_correct=True,  # blue
             alpha=60  
         )  
         annotated_layer2.save("layer2_blue_box_in_red_circle.png")  
-        self.debug_print("第二层完成: 蓝色方框标注 (235B)") 
+        self.debug_print("Layer 2 completed: blue box annotation (235B)")
 
-        # 第三层: Qwen3-VL-32B 最终修正 - 在蓝色方框内精确定位  
+        # Layer 3: Qwen3-VL-32B final correction - precise localization within blue box
         third_pixel_point, qwen_final_response = self.refine_with_final_stage(  
             instruction, resized_image, qwen_pixel_point, final_pixel_point,  
             qwen_response, qwen_refined_response  
         )  
         
-        # 第三层失败回退  
+        # Fallback on Layer 3 failure
         if third_pixel_point is None:  
-            self.debug_print("第三层修正失败, 回退到第二层结果")  
+            self.debug_print("Layer 3 correction failed; fallback to Layer 2 result")
             third_pixel_point = final_pixel_point  
         
-        # 保存第三层标注图像 - 显示所有三层结果  
+        # Save Layer 3 annotated image - show all three-layer results
         annotated_layer3 = annotated_layer2.copy()  
         annotated_layer3 = self.plot_annotated_circle(  
             annotated_layer3,  
             third_pixel_point,  
-            radius=10,  # 小圆圈,精确标注  
+            radius=10,  # small circle for precise annotation
             is_correct=None,   
             alpha=200  
         )  
         annotated_layer3.save("layer3_final_precise_point.png")  
-        self.debug_print("第三层完成: 最终精确定位 (32B)")  
+        self.debug_print("Layer 3 completed: final precise localization (32B)")
         
-        # 使用第三层结果作为最终输出  
+        # Use Layer 3 result as final output
         final_pixel_point = third_pixel_point    
           
         
-        # 坐标映射回原始图像    
+        # Map coordinates back to original image
         scale_x = original_width / resized_width      
         scale_y = original_height / resized_height      
         final_original_point = [      
@@ -589,7 +589,7 @@ Return ONLY the JSON, no explanation."""
             final_pixel_point[1] * scale_y      
         ]      
         
-        # 归一化到[0,1]    
+        # Normalize to [0,1]
         final_normalized_point = self.normalize_pixel_coordinates(      
             final_original_point,       
             original_width,       
@@ -607,6 +607,6 @@ Return ONLY the JSON, no explanation."""
             }      
         }
     
-    def ground_allow_negative(self, instruction, image):  
-        """支持负样本的grounding"""  
+    def ground_allow_negative(self, instruction, image):
+        """Support negative sample grounding"""
         return self.ground_only_positive(instruction, image)
