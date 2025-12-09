@@ -17,18 +17,17 @@ def convert_pil_image_to_base64(image):
     return img_str    
 
 
-class Qwen3VLTripleMethod:  
+class Qwen3VL235B32BTripleMethod:  
     def __init__(self,     
-             
-             qwen_model="qwen3-vl-32b-instruct",  
-             qwen_refine_model="qwen3-vl-235b-a22b-instruct",   
+             qwen_model="qwen3-vl-235b-a22b-instruct",  
+             qwen_refine_model="qwen3-vl-32b-instruct",   
              qwen_api_base="https://dashscope.aliyuncs.com/compatible-mode/v1"):  
         """
-        Three-layer composite model: 32B initial detection → 235B refinement → 32B final localization
+        Three-layer composite: Qwen-235B initial detection + Qwen-32B refinement + Qwen-235B finalization
 
         Args:
-            qwen_model: Model used for initial and final stages (32B)
-            qwen_refine_model: Strong model used for middle refinement (235B)
+            qwen_model: Initial detection model name (Dashscope format)
+            qwen_refine_model: Refinement model name (Dashscope format)
             qwen_api_base: Dashscope API endpoint for Qwen
         """
         self.qwen_model = qwen_model  
@@ -246,7 +245,7 @@ class Qwen3VLTripleMethod:
 
 
     def ground_with_qwen_initial(self, instruction, image):
-        """Layer 1: Qwen3-VL-32B initial detection"""
+        """Layer 1: Qwen3-VL initial detection"""
         input_width, input_height = image.size    
         
      
@@ -318,7 +317,6 @@ class Qwen3VLTripleMethod:
             }    
         ]    
     
-        
         response = self.call_dashscope_api(messages, model_name=self.qwen_model)    
         
   
@@ -328,8 +326,8 @@ class Qwen3VLTripleMethod:
 
 
     def refine_with_qwen(self, instruction, annotated_image, initial_pixel_point, initial_response, is_correct=False):
-        """Layer 2: Qwen3-VL-235B correction"""
-        self.debug_print("=== Layer 2: Qwen3-VL-235B correction ===")
+        """Layer 2: Qwen3-VL correction"""
+        self.debug_print("=== Layer 2: Qwen3-VL correction ===")
         resized_width, resized_height = annotated_image.size  
         
         x_pixel, y_pixel = initial_pixel_point if initial_pixel_point else (resized_width//2, resized_height//2)          
@@ -390,18 +388,17 @@ NO explanations. NO text outside tags."""
             }          
         ]          
         
-       
         refined_response = self.call_dashscope_api(messages, model_name=self.qwen_refine_model)
-        self.debug_print(f"Qwen-235B correction response: {refined_response}")
+        self.debug_print(f"Qwen correction response: {refined_response}")
         
         refined_pixel_point = self.parse_normalized_coordinates(refined_response, resized_width, resized_height)          
         
         return refined_pixel_point, refined_response
     
-    def refine_with_final_stage(self, instruction, image, first_pixel_point, second_pixel_point,
+    def refine_with_qwen_235b_final(self, instruction, image, first_pixel_point, second_pixel_point,
                                 first_response, second_response):
-        """Layer 3: Qwen3-VL-32B final correction"""
-        self.debug_print("=== Layer 3: Qwen3-VL-32B final correction ===")
+        """Layer 3: Qwen3-VL-235B final correction"""
+        self.debug_print("=== Layer 3: Qwen3-VL-235B final correction ===")
         resized_width, resized_height = image.size    
           
         annotated_image = image.copy()    
@@ -422,9 +419,9 @@ NO explanations. NO text outside tags."""
                 annotated_image,    
                 second_pixel_point,    
                 box_size=100,
-                is_correct=True,  # blue
+                is_correct=True,  # blue    
                 alpha=60    
-            )   
+            )
         
      
         first_x_1000 = int((first_pixel_point[0] / resized_width) * 1000) if first_pixel_point else 500    
@@ -486,9 +483,9 @@ Return ONLY the JSON, no explanation."""
             }    
         ]    
         
-        
-        response = self.call_dashscope_api(messages, model_name=self.qwen_model)
-        self.debug_print(f"Qwen-32B final correction response: {response}")
+  
+        response = self.call_dashscope_api(messages, model_name=self.qwen_235b_model)
+        self.debug_print(f"Qwen-235B final correction response: {response}")
       
         final_pixel_point = self.parse_normalized_coordinates(response, resized_width, resized_height)    
         
@@ -507,7 +504,7 @@ Return ONLY the JSON, no explanation."""
             
         original_width, original_height = image.size      
         
-        # Layer 1: Qwen3-VL-32B initial detection
+        # Layer 1: Qwen3-VL-235B initial detection
         qwen_pixel_point, qwen_response, resized_image = self.ground_with_qwen_initial(instruction, image)  
         resized_width, resized_height = resized_image.size  
         
@@ -528,18 +525,18 @@ Return ONLY the JSON, no explanation."""
             alpha=60  
         )  
         annotated_layer1.save("layer1_large_red_circle.png")  
-        self.debug_print("Layer 1 completed: large red circle annotation (32B)")
+        self.debug_print("Layer 1 completed: large red circle annotation")
         
         time.sleep(1)  # Avoid API rate limits
     
-        # Layer 2: Qwen3-VL-235B correction - search within red circle
+        # Layer 2: Qwen3-VL-32B correction - search within red circle
         final_pixel_point, qwen_refined_response = self.refine_with_qwen(  
             instruction, annotated_layer1, qwen_pixel_point, qwen_response, is_correct=False  
         )  
         
         # Fallback on correction failure
         if final_pixel_point is None:  
-            self.debug_print("Qwen-235B correction failed; fallback to initial result")
+            self.debug_print("Qwen correction failed; fallback to Qwen initial result")
             final_pixel_point = qwen_pixel_point  
         
         # Save Layer 2 annotated image - overlay blue box on Layer 1
@@ -552,10 +549,10 @@ Return ONLY the JSON, no explanation."""
             alpha=60  
         )  
         annotated_layer2.save("layer2_blue_box_in_red_circle.png")  
-        self.debug_print("Layer 2 completed: blue box annotation (235B)")
+        self.debug_print("Layer 2 completed: blue box annotation (inside red circle)")
 
-        # Layer 3: Qwen3-VL-32B final correction - precise localization within blue box
-        third_pixel_point, qwen_final_response = self.refine_with_final_stage(  
+        # Layer 3: Qwen3-VL-235B final correction - precise localization within blue box
+        third_pixel_point, qwen_final_response = self.refine_with_qwen_235b_final(  
             instruction, resized_image, qwen_pixel_point, final_pixel_point,  
             qwen_response, qwen_refined_response  
         )  
@@ -575,7 +572,7 @@ Return ONLY the JSON, no explanation."""
             alpha=200  
         )  
         annotated_layer3.save("layer3_final_precise_point.png")  
-        self.debug_print("Layer 3 completed: final precise localization (32B)")
+        self.debug_print("Layer 3 completed: final precise localization")
         
         # Use Layer 3 result as final output
         final_pixel_point = third_pixel_point    
@@ -609,4 +606,4 @@ Return ONLY the JSON, no explanation."""
     
     def ground_allow_negative(self, instruction, image):
         """Support negative sample grounding"""
-        return self.ground_only_positive(instruction, image)
+        return self.ground_only_positive(instruction, image)  
