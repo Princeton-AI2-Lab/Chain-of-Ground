@@ -128,6 +128,7 @@ If your model file resides under `models/TPanel_UI` or `models/ScreenSpot-pro`, 
 - Images and JSON annotations with fields: `id`, `img_filename`, `img_size`, `bbox` (x1,y1,x2,y2), `platform`, `application`, `data_type/ui_type`, `instruction`, `instruction_cn`, `language`, `gt_type`, `instruction_style`.
 - Positive samples include a target `bbox`; negative samples are explicitly labeled with `gt_type=negative`.
 - Dataset: https://huggingface.co/datasets/chico-research/tpanel-ui
+- We recommend using the command-line interface to obtain the dataset of this paper: hf download chico-research/tpanel-ui --repo-type dataset --local-dir [your_local_storage_path]
 
 ## Experimental Setup
 - Environment variables: `DASHSCOPE_API_KEY` (Dashscope), `OPENROUTER_API_KEY` (OpenRouter).
