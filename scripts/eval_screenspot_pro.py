@@ -6,8 +6,6 @@ import json
 import re
 import argparse
 import os
-import sys
-sys.path.append(os.path.dirname(__file__))
 from PIL import Image
 import logging
 from tqdm import tqdm
@@ -21,28 +19,25 @@ torch.manual_seed(114514)
 
 GT_TYPES = ['positive', 'negative']
 INSTRUCTION_STYLES = ['instruction', 'action', 'description']
+LANGUAGES = ['en', 'cn']
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', type=str, choices=['dual','triple'], required=True)
-    parser.add_argument('--model1', type=str, required=True)
-    parser.add_argument('--model2', type=str, required=True)
-    parser.add_argument('--model3', type=str)
-    parser.add_argument('--instruction', type=str, required=True)
-    parser.add_argument('--image', type=str, required=True)
-    parser.add_argument('--batch', action='store_true')
-    parser.add_argument('--dataset_type', type=str, choices=['sspro','tpanelui'])
-    parser.add_argument('--screens_dir', type=str)
-    parser.add_argument('--tests_dir', type=str)
-    parser.add_argument('--task', type=str, default='all')
-    parser.add_argument('--inst_style', type=str, default='instruction')
-    parser.add_argument('--gt_type', type=str, default='positive')
-    parser.add_argument('--output', type=str)
+    parser.add_argument('--model_type', type=str, required=True)
+    parser.add_argument('--model_name_or_path', type=str, required=False)
+    parser.add_argument('--screenspot_imgs', type=str, required=True)
+    parser.add_argument('--screenspot_test', type=str, required=True)
+    parser.add_argument('--task', type=str, required=True)
+    parser.add_argument('--inst_style', type=str, required=True, choices=INSTRUCTION_STYLES + ['all'], help="Instruction style to use.")
+    parser.add_argument('--language', type=str, required=True, choices=LANGUAGES + ['all'], default='en', help="Language to use.")
+    parser.add_argument('--gt_type', type=str, required=True, choices=GT_TYPES + ['all'], help="Ground truth type: 'positive' or 'negative'.")
+    parser.add_argument('--log_path', type=str, required=True)
+
     args = parser.parse_args()
     return args
 
 
-def collect_results_to_eval(results, platform=None, group=None, application=None, gt_type=None, instruction_style=None, ui_type=None):
+def collect_results_to_eval(results, platform=None, group=None, application=None, language=None, gt_type=None, instruction_style=None, ui_type=None):
     """
     Filters the results based on provided values. None means include all (ignore filtering this attribute).
 
@@ -59,6 +54,7 @@ def collect_results_to_eval(results, platform=None, group=None, application=None
         if (platform is None or sample.get("platform") == platform) and \
            (group is None or sample.get("group") == group) and \
            (application is None or sample.get("application") == application) and \
+           (language is None or sample.get("language") == language) and \
            (gt_type is None or sample.get("gt_type") == gt_type) and \
            (instruction_style is None or sample.get("instruction_style") == instruction_style) and \
            (ui_type is None or sample.get("ui_type") == ui_type):
@@ -67,7 +63,7 @@ def collect_results_to_eval(results, platform=None, group=None, application=None
     return filtered_results
 
 
-def make_combinations(results, platform=False, group=None, application=False, gt_type=False, instruction_style=False, ui_type=False):
+def make_combinations(results, platform=False, group=None, application=False, language=False, gt_type=False, instruction_style=False, ui_type=False):
     """
     Returns a list of combinations of values for attributes where the corresponding parameter is set to True.
     """
@@ -76,6 +72,7 @@ def make_combinations(results, platform=False, group=None, application=False, gt
         "platform": set(),
         "group": set(),
         "application": set(),
+        "language": set(),
         "gt_type": set(),
         "instruction_style": set(),
         "ui_type": set(),
@@ -89,7 +86,8 @@ def make_combinations(results, platform=False, group=None, application=False, gt
             unique_values["group"].add(sample.get("group"))
         if application:
             unique_values["application"].add(sample.get("application"))
-        
+        if language:
+            unique_values["language"].add(sample.get("language"))
         if gt_type:
             unique_values["gt_type"].add(sample.get("gt_type"))
         if instruction_style:
@@ -334,22 +332,6 @@ def evaluate(results):
 
     return result_report
 
-def run_cli_aligned(args):
-    import importlib.util
-    root = os.path.dirname(os.path.dirname(__file__))
-    cli_main_path = os.path.join(root, 'cli', 'main.py')
-    spec = importlib.util.spec_from_file_location('cli_main', cli_main_path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    if args.mode == 'triple' and not args.model3:
-        raise ValueError('model3 required for triple mode')
-    if args.batch:
-        if not args.screens_dir or not args.tests_dir:
-            raise ValueError('screens_dir and tests_dir required for batch mode')
-        mod.run_batch(args)
-        return
-    mod.run(args)
-
 def main(args):
     model = build_model(args)
     print("Load model success")
@@ -368,7 +350,10 @@ def main(args):
     else:
         inst_styles = args.inst_style.split(",")
 
-    
+    if args.language == "all":
+        languages = LANGUAGES
+    else:
+        languages = args.language.split(",")
 
     if args.gt_type == "all":
         gt_types = GT_TYPES
@@ -384,24 +369,30 @@ def main(args):
         # Create the list of tasks to run, one item as an instance. Tasks may be reused.
         for inst_style in inst_styles:  # Expand tasks based on user configurations
             for gt_type in gt_types:
-                for task_instance in task_data:
-                    task_instance = copy.deepcopy(task_instance)
-                    task_instance["task_filename"] = task_filename
-                    task_instance["gt_type"] = gt_type
-                    task_instance["instruction_style"] = inst_style
-                    if "language" not in task_instance:
-                        task_instance["language"] = "en"
-                    task_instance["prompt_to_evaluate"] = task_instance["instruction"]
+                for lang in languages:
+                    for task_instance in task_data:
+                        task_instance = copy.deepcopy(task_instance)
+                        task_instance["task_filename"] = task_filename
+                        task_instance["gt_type"] = gt_type
+                        task_instance["instruction_style"] = inst_style
+                        task_instance["language"] = lang
+                        if lang == "cn":
+                            if inst_style!= 'instruction' or gt_type != 'positive':
+                                # TODO: Translate the data
+                                raise AttributeError("Only positive samples and 'instruction' style are supported for Chinese instructions.")
+                            task_instance["prompt_to_evaluate"] = task_instance["instruction_cn"]
+                        elif lang == "en":
+                            task_instance["prompt_to_evaluate"] = task_instance["instruction"]
 
-                    tasks_to_run.append(task_instance)
-        print(f"Num of sample in {task_filename}: {len(task_data)} * {len(inst_styles)} * {len(gt_types)} = {len(task_data) * len(inst_styles) * len(gt_types)}")
+                        tasks_to_run.append(task_instance)
+        print(f"Num of sample in {task_filename}: {len(task_data)} * {len(inst_styles)} * {len(gt_types)} * {len(languages)} = {len(task_data) * len(inst_styles) * len(gt_types) * len(languages)}")
     print(f"Total tasks: {len(tasks_to_run)}")
 
  
-    VISUALIZE_FIRST_N = 100
-    vis_count = 0
-    vis_dir = f"./visualizations_{args.model_type}"
-    os.makedirs(vis_dir, exist_ok=True)
+    VISUALIZE_FIRST_N = 100  
+    vis_count = 0  
+    vis_dir = f"./visualizations_{args.model_type}"   
+    os.makedirs(vis_dir, exist_ok=True) 
 
     results = []
     for sample in tqdm(tasks_to_run):
@@ -436,68 +427,70 @@ def main(args):
         if "application" not in sample:  
             sample["application"] = sample.get("data_source", "unknown")
 
-        if sample["gt_type"] == "positive":
+        if task_instance["gt_type"] == "positive":
             response = model.ground_only_positive(instruction=sample["prompt_to_evaluate"], image=img_path)
-        elif sample["gt_type"] == "negative":
+        elif task_instance["gt_type"] == "negative":
             response = model.ground_allow_negative(instruction=sample["prompt_to_evaluate"], image=img_path)
         # print(response)
         point = response["point"]
         img_size = sample["img_size"]
         point_in_pixel = [point[0] * img_size[0], point[1] * img_size[1]] if point else None
-        # Critical fix: compute correctness first
-        if sample["gt_type"] == "positive":
-            correctness = eval_sample_positive_gt(sample, response)
-        elif sample["gt_type"] == "negative":
-            correctness = eval_sample_negative_gt(sample, response)
-        else:
-            correctness = "wrong_format"
 
-        # Add real-time visualization logic
-        if vis_count < VISUALIZE_FIRST_N and sample["gt_type"] == "positive" and point:
-            # Load image
-            img = Image.open(img_path)
-            img_width, img_height = img.size
+         # ===== 关键修正: 先计算 correctness =====  
+        if sample["gt_type"] == "positive":  
+            correctness = eval_sample_positive_gt(sample, response)  
+        elif sample["gt_type"] == "negative":  
+            correctness = eval_sample_negative_gt(sample, response)  
+        else:  
+            correctness = "wrong_format"  
+        # ===== correctness 计算完成 =====
 
-            # Create figure
-            fig, ax = plt.subplots(1, figsize=(12, 8))
-            ax.imshow(img)
-
-            # Draw ground-truth bbox (green)
-            bbox = sample["bbox"]
-            rect = patches.Rectangle(
-                (bbox[0], bbox[1]),
-                bbox[2] - bbox[0],
-                bbox[3] - bbox[1],
-                linewidth=3,
-                edgecolor='green',
-                facecolor='none',
-                label='Ground Truth'
-            )
-            ax.add_patch(rect)
-
-            # Draw prediction (blue=correct, red=wrong)
-            pred_x, pred_y = point_in_pixel
-            color = 'blue' if correctness == 'correct' else 'red'
-            ax.plot(pred_x, pred_y, 'o', color=color, markersize=12,
-                   label=f'Prediction ({correctness})')
-
-            # Add title
-            title = f"Sample {vis_count + 1}/{VISUALIZE_FIRST_N}\n"
-            title += f"App: {sample['application']} | Platform: {sample['platform']}\n"
-            title += f"Instruction: {sample['prompt_to_evaluate'][:80]}...\n"
-            title += f"Correctness: {correctness}"
-            ax.set_title(title, fontsize=10)
-            ax.legend()
-            ax.axis('off')
-
-            # Save visualization
-            plt.savefig(f"{vis_dir}/sample_{vis_count:04d}_{correctness}.png",
-                       bbox_inches='tight', dpi=100)
-            plt.close()
-
-            print(f"\n[Visualization] Saved sample {vis_count + 1} to {vis_dir}/")
-            vis_count += 1
-        # End visualization logic
+        # ===== 添加实时可视化逻辑 =====  
+        if vis_count < VISUALIZE_FIRST_N and sample["gt_type"] == "positive" and point:  
+            # 加载图像  
+            img = Image.open(img_path)  
+            img_width, img_height = img.size  
+              
+            # 创建图形  
+            fig, ax = plt.subplots(1, figsize=(12, 8))  
+            ax.imshow(img)  
+              
+            # 绘制真实边界框(绿色)  
+            bbox = sample["bbox"]  
+            rect = patches.Rectangle(  
+                (bbox[0], bbox[1]),   
+                bbox[2] - bbox[0],   
+                bbox[3] - bbox[1],  
+                linewidth=3,   
+                edgecolor='green',   
+                facecolor='none',  
+                label='Ground Truth'  
+            )  
+            ax.add_patch(rect)  
+              
+            # 绘制预测点(蓝色=正确,红色=错误)  
+            pred_x, pred_y = point_in_pixel  
+            color = 'blue' if correctness == 'correct' else 'red'  
+            ax.plot(pred_x, pred_y, 'o', color=color, markersize=12,   
+                   label=f'Prediction ({correctness})')  
+              
+            # 添加标题  
+            title = f"Sample {vis_count + 1}/{VISUALIZE_FIRST_N}\n"  
+            title += f"App: {sample['application']} | Platform: {sample['platform']}\n"  
+            title += f"Instruction: {sample['prompt_to_evaluate'][:80]}...\n"  
+            title += f"Correctness: {correctness}"  
+            ax.set_title(title, fontsize=10)  
+            ax.legend()  
+            ax.axis('off')  
+              
+            # 保存可视化结果  
+            plt.savefig(f"{vis_dir}/sample_{vis_count:04d}_{correctness}.png",   
+                       bbox_inches='tight', dpi=100)  
+            plt.close()  
+              
+            print(f"\n[可视化] 已保存第 {vis_count + 1} 个样本到 {vis_dir}/")  
+            vis_count += 1  
+        # ===== 可视化逻辑结束 ===== 
         
         sample_result = {
             "id": sample["id"],
@@ -540,4 +533,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    run_cli_aligned(parse_args())
+    main(parse_args())
