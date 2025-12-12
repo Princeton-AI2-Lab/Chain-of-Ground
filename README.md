@@ -94,9 +94,9 @@ python cli/main.py \
 # Batch evaluation (sspro or tpanelui)
 python cli/main.py \
   --mode triple \
-  --model1 qwen/qwen-3-vl-235b-instruct \
-  --model2 qwen/qwen-3-vl-32b-instruct \
-  --model3 qwen/qwen-3-vl-235b-instruct \
+  --model1 qwen/qwen3-vl-235b-a22b-instruct \
+  --model2 qwen/qwen3-vl-235b-a22b-instruct \
+  --model3 qwen/qwen3-vl-235b-a22b-instruct \
   --batch \
   --dataset_type tpanelui \
   --screens_dir ./tpanel-ui/images \
