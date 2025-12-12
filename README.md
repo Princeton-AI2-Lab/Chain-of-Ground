@@ -28,6 +28,7 @@ pip install pillow requests transformers torch tqdm matplotlib
 ## Setup
 - Environment variables:
   - `OPENROUTER_API_KEY` for all models via OpenRouter
+  - `DASHSCOPE_API_KEY` for qwen3-vl-32b-instruct
 
 ## Quick Start
 Dataset download
@@ -105,25 +106,9 @@ python cli/main.py \
   --inst_style instruction \
   --gt_type positive \
   --output ./logs.json
+  
+```
 
-Same invocation via scripts wrapper (identical flags):
-
-```
-python scripts/eval_screenspot_pro.py \
-  --mode triple \
-  --model1 qwen/qwen-3-vl-235b-instruct \
-  --model2 qwen/qwen-3-vl-32b-instruct \
-  --model3 qwen/qwen-3-vl-235b-instruct \
-  --batch \
-  --dataset_type tpanelui \
-  --screens_dir ./tpanel-ui/images \
-  --tests_dir ./tpanel-ui/jsons \
-  --task all \
-  --inst_style instruction \
-  --gt_type positive \
-  --output ./logs.json
-```
-```
 
 ## Dataset Format
 Expected fields (example for a positive sample):
