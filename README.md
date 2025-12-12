@@ -17,8 +17,7 @@ Chain-of-Ground is a training-free, multi-step framework for GUI grounding. This
 ## Repository Structure
 - `models/ScreenSpot-pro` — screen grounding pipelines tailored for screenshot tasks
 - `models/TPanel_UI` — triple-layer and two-layer UI grounding methods and baselines
-- `eval_screenspot_pro.py` — evaluation and visualization utilities for dataset results
-- `model_factory.py` — factory for loading models by type (adjust imports if needed)
+
 
 ## Installation
 
@@ -54,7 +53,7 @@ Example directory layout (may vary; refer to dataset card):
 ```
 ./tpanel-ui/
   images/                # screenshots
-  jsons/                 # test samples (*.json)
+  annotations/                 # test samples (*.json)
 
 ./screenspot-pro/
   images/                # high-resolution screenshots
@@ -78,17 +77,17 @@ Run pipelines via CLI (OpenRouter only):
 # Dual-layer (UITars → Qwen) on a single image
 python cli/main.py \
   --mode dual \
-  --model1 bytedance/ui-tars-v1.5-7b \
-  --model2 qwen/qwen-3-vl-32b-instruct \
+  --model1 bytedance/ui-tars-1.5-7b \
+  --model2 qwen/qwen3-vl-235b-a22b-instruct \
   --instruction "Open Settings" \
   --image /path/to/screenshot.jpg
 
 # Triple-layer Qwen on a single image
 python cli/main.py \
   --mode triple \
-  --model1 qwen/qwen-3-vl-235b-instruct \
-  --model2 qwen/qwen-3-vl-32b-instruct \
-  --model3 qwen/qwen-3-vl-235b-instruct \
+  --model1 qwen/qwen3-vl-235b-a22b-instruct \
+  --model2 qwen/qwen3-vl-235b-a22b-instruct \
+  --model3 qwen/qwen3-vl-235b-a22b-instruct \
   --instruction "Open Settings" \
   --image /path/to/screenshot.jpg
 
@@ -101,7 +100,7 @@ python cli/main.py \
   --batch \
   --dataset_type tpanelui \
   --screens_dir ./tpanel-ui/images \
-  --tests_dir ./tpanel-ui/jsons \
+  --tests_dir ./tpanel-ui/annotations \
   --task all \
   --inst_style instruction \
   --gt_type positive \
