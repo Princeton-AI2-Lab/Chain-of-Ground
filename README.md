@@ -58,7 +58,7 @@ Example directory layout (may vary; refer to dataset card):
 
 ./screenspot-pro/
   images/                # high-resolution screenshots
-  annotations/ or jsons/ # annotations (bbox, instruction, ui_type, etc.)
+  annotations/           # annotations (bbox, instruction, ui_type, etc.)
 ```
 
 Batch evaluation parameter mapping:
