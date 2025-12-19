@@ -14,6 +14,61 @@ Chain-of-Ground is a training-free, multi-step framework for GUI grounding. This
 </div>
 
 
+## Result
+
+ScreenSpot-Pro
+
+| Agent Model               | Development | Creative | CAD  | Scientific | Office | OS   | Avg  |
+| ------------------------- | ----------- | -------- | ---- | ---------- | ------ | ---- | ---- |
+| Triple-Step CoG*          | 69.2        | 65.7     | 57.9 | 69.3       | 80.9   | 71.9 | 68.4 |
+| Dual-Step CoG*            | 66.4        | 63.1     | 59.5 | 70.9       | 80.9   | 62.3 | 66.7 |
+| GTA-32B                   | 61.2        | 52.8     | 60.5 | 65.0       | 83.5   | 65.3 | 63.6 |
+| Holo1.5-72B               | 63.5        | 62.5     | 51.3 | 64.2       | 79.6   | 59.7 | 63.3 |
+| UI-TARS-1.5               | 63.9        | 50.4     | 58.2 | 69.3       | 79.6   | 51.0 | 61.6 |
+| Qwen3-VL-32B-Instruct*    | 67.5        | 57.6     | 47.9 | 65.3       | 73.6   | 60.1 | 61.4 |
+| Seed-1.5-VL               | 53.8        | 59.2     | 59.0 | 61.4       | 74.8   | 60.2 | 60.9 |
+| Qwen2.5-VL-72B-Instruct   | 53.5        | 44.9     | 44.4 | 59.1       | 72.6   | 49.5 | 53.3 |
+| GUI-Spontight-18B         | 52.6        | 44.8     | 51.6 | 53.5       | 70.4   | 45.9 | 52.8 |
+| SE-GUI-7B                 | 44.5        | 37.2     | 42.1 | 54.7       | 70.4   | 38.8 | 47.3 |
+| UI-7B-L4.57B              | 31.8        | 40.2     | 31.8 | 47.2       | 65.6   | 33.2 | 42.0 |
+| JE-TARS-1                 | 27.4        | 34.0     | 32.2 | 52.4       | 68.7   | 26.0 | 39.5 |
+| UI-TARS-72B               | 40.8        | 39.6     | 17.2 | 45.7       | 54.8   | 30.1 | 38.1 |
+| GUI-GI-3B                 | 31.1        | 26.6     | 32.2 | 48.0       | 59.1   | 16.1 | 37.1 |
+| Operator                  | 35.1        | 39.6     | 16.1 | 43.7       | 53.0   | 32.7 | 36.6 |
+| JE-3B                     | 38.1        | 34.6     | 23.0 | 38.6       | 57.0   | 25.5 | 36.1 |
+| SeDi-GU-146               | 35.1        | 29.0     | 31.8 | 43.3       | 50.9   | 25.0 | 35.9 |
+| UGround-72B               | 31.1        | 35.8     | 13.8 | 50.0       | 51.3   | 25.5 | 34.5 |
+| Claude 3 Sonnet           | -           | -        | -    | -          | -      | -    | 27.7 |
+| Qwen2.5-7B-7B             | 29.1        | 24.9     | 13.8 | 31.1       | 45.7   | 22.4 | 27.6 |
+| OS-Atlas-VB               | 17.7        | 17.9     | 10.3 | 24.4       | 27.4   | 16.8 | 18.9 |
+| Aria-UI                   | 8.4         | 14.7     | 6.1  | 18.1       | 16.1   | 2.6  | 11.3 |
+| CogAgent-18B              | 8.0         | 5.6      | 6.1  | 13.4       | 10.0   | 3.1  | 7.7  |
+| SeeClick                  | 0.3         | 0.6      | 1.9  | 2.0        | 0.9    | 1.5  | 1.1  |
+| GPT-4o                    | 0.7         | 0.6      | 1.5  | 1.2        | 0.9    | 0.0  | 0.8  |
+
+ScreenSpot-Pro（Supplement）
+| Model Combination                                  | Dev  | Creative | CAD  | Scientific | Office | OS   | Avg  |
+| -------------------------------------------------- | ---- | -------- | ---- | ---------- | ------ | ---- | ---- |
+| **Baselines (Single-Step)**                        |      |          |      |            |        |      |      |
+| UI-TARS-1.5-7B                                     | 31.8 | 40.2     | 31.8 | 47.2       | 65.6   | 33.2 | 42.0 |
+| Qwen3-VL-32B                                       | 67.5 | 57.6     | 47.9 | 65.3       | 73.6   | 60.1 | 61.4 |
+| Qwen3-VL-235B                                      | 66.4 | 63.1     | 52.8 | 66.1       | 75.8   | 61.9 | 63.9 |
+| Gemini-3-pro                                      | 80.3 | 75.8     | 51.6 | 74.8       | 85.7   | 68.9 | 72.4 |
+| **Dual-Step CoG Variants**                         |      |          |      |            |        |      |      |
+| Qwen3-VL-32B → Qwen3-VL-32B                        | 65.4 | 64.7     | 57.2 | 69.3       | 79.6   | 61.2 | 65.8 |
+| Qwen3-VL-235B → Qwen3-VL-32B                       | 66.4 | 63.1     | 59.5 | 70.9       | 80.9   | 62.3 | 66.7 |
+| Gemini-3-pro → Gemini-3-pro                       | 81.3 | 78.1     | 54.3 | 81.9       | 87.8   | 72 | 75.3 |
+| **Triple-Step CoG Variants**                       |      |          |      |            |        |      |      |
+| Qwen3-VL-235B → Qwen3-VL-32B → Qwen3-VL-235B       | 69.2 | 60.8     | 61.8 | 70.9       | 76.6   | 60.7 | 66.4 |
+| Qwen3-VL-32B → Qwen3-VL-32B → Qwen3-VL-32B         | 69.8 | 66.3     | 58.5 | 68.5       | 78.3   | 66.3 | 67.5 |
+| UI-TARS-1.5-7B → Qwen3-VL-235B → Qwen3-VL-32B      | 69.2 | 65.7     | 57.9 | 69.3       | 80.9   | 71.9 | 68.4 |
+| Qwen3-VL-235B → Qwen3-VL-235B → Qwen3-VL-235B       | 69.6 | 62.4     | 56.9 | 69.7       | 77.0   | 59.2 | 65.6 |
+| Qwen3-VL-32B → UI-TARS-1.5-7B → Qwen3-VL-32B        | 63.4 | 62.7     | 59.2 | 67.3       | 74.3   | 60.2 | 64.3 |
+| Qwen3-VL-32B → Qwen3-VL-235B → Qwen3-VL-32B         | 70.9 | 64.7     | 52.6 | 70.9       | 78.3   | 66.9 | 66.7 |
+| UI-TARS-1.5-7B → Qwen3-VL-235B → Gemini-3-pro         | 77.5 | 74.5     | 62.4 | 73.9       | 83.5   | 71.4 | 73.5 |
+
+
+
 ## Repository Structure
 - `models/ScreenSpot-pro` — screen grounding pipelines tailored for screenshot tasks
 - `models/TPanel_UI` — triple-layer and two-layer UI grounding methods and baselines
@@ -150,9 +205,7 @@ python eval_screenspot_pro.py \
   --log_path ./logs.json
 ```
 
-# Result
 
-| 列1 | 列2 | 列3 | |——|——|——| | 数据1 | 数据2 | 数据3 | | 数据4 | 数据5 | 数据6 |
 
 
 If your model file resides under `models/TPanel_UI` or `models/ScreenSpot-pro`, align import paths in `model_factory.py` or use dynamic import as shown. Note: folders with characters like spaces, hyphens, or parentheses are not Python packages; dynamic import by file path avoids this.
