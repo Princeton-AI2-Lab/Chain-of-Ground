@@ -150,7 +150,8 @@ python eval_screenspot_pro.py \
   --log_path ./logs.json
 ```
 
-## Results
+# Result
+
 | 列1 | 列2 | 列3 | |——|——|——| | 数据1 | 数据2 | 数据3 | | 数据4 | 数据5 | 数据6 |
 
 
