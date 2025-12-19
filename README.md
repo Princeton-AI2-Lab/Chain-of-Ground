@@ -150,10 +150,11 @@ python eval_screenspot_pro.py \
   --log_path ./logs.json
 ```
 
-If your model file resides under `models/TPanel_UI` or `models/ScreenSpot-pro`, align import paths in `model_factory.py` or use dynamic import as shown. Note: folders with characters like spaces, hyphens, or parentheses are not Python packages; dynamic import by file path avoids this.
-
 ## Results
 | 列1 | 列2 | 列3 | |——|——|——| | 数据1 | 数据2 | 数据3 | | 数据4 | 数据5 | 数据6 |
+
+
+If your model file resides under `models/TPanel_UI` or `models/ScreenSpot-pro`, align import paths in `model_factory.py` or use dynamic import as shown. Note: folders with characters like spaces, hyphens, or parentheses are not Python packages; dynamic import by file path avoids this.
 
 
 ## Pipeline
