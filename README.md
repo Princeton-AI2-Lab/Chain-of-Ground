@@ -280,10 +280,6 @@ We report overall accuracy and per-UI-type accuracy (text, icon). Example highli
 
 Fine-grained reports by platform, application, instruction style, and ground-truth type are produced by the evaluation script. Visualizations for the first N positive samples are saved to `./visualizations_{model_type}`.
 
-## Limitations
-- Reliance on external APIs may introduce latency and rate limits.
-- Formatting deviations can still degrade parsing despite regex fallbacks.
-
 ## Citation
 
 ```
