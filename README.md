@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![arXiv](https://img.shields.io/badge/arXiv-2512.01979-b31b1b.svg)](https://arxiv.org/abs/2512.01979) [![PDF](https://img.shields.io/badge/PDF-Download-blue.svg)](https://arxiv.org/pdf/2512.01979.pdf) [![Dataset](https://img.shields.io/badge/Dataset-HuggingFace-yellow.svg)](https://huggingface.co/datasets/chico-research/tpanel-ui)
+[![arXiv](https://img.shields.io/badge/arXiv-2512.01979-b31b1b.svg?style=for-the-badge&logo=arxiv&logoColor=white)](https://arxiv.org/abs/2512.01979) [![PDF](https://img.shields.io/badge/PDF-Download-blue.svg?style=for-the-badge&logo=adobe&logoColor=white)](https://arxiv.org/pdf/2512.01979.pdf) [![Dataset](https://img.shields.io/badge/Dataset-HuggingFace-yellow.svg?style=for-the-badge&logo=huggingface&logoColor=white)](https://huggingface.co/datasets/chico-research/tpanel-ui)
 
 </div>
 
@@ -46,7 +46,7 @@ ScreenSpot-Pro
 | SeeClick                  | 0.3         | 0.6      | 1.9  | 2.0        | 0.9    | 1.5  | 1.1  |
 | GPT-4o                    | 0.7         | 0.6      | 1.5  | 1.2        | 0.9    | 0.0  | 0.8  |
 
-ScreenSpot-Pro（Supplement）
+ScreenSpot-Pro (Supplement)
 | Model Combination                                  | Dev  | Creative | CAD  | Scientific | Office | OS   | Avg  |
 | -------------------------------------------------- | ---- | -------- | ---- | ---------- | ------ | ---- | ---- |
 | **Baselines (Single-Step)**                        |      |          |      |            |        |      |      |
@@ -65,7 +65,6 @@ ScreenSpot-Pro（Supplement）
 | Qwen3-VL-235B → Qwen3-VL-235B → Qwen3-VL-235B       | 69.6 | 62.4     | 56.9 | 69.7       | 77.0   | 59.2 | 65.6 |
 | Qwen3-VL-32B → UI-TARS-1.5-7B → Qwen3-VL-32B        | 63.4 | 62.7     | 59.2 | 67.3       | 74.3   | 60.2 | 64.3 |
 | Qwen3-VL-32B → Qwen3-VL-235B → Qwen3-VL-32B         | 70.9 | 64.7     | 52.6 | 70.9       | 78.3   | 66.9 | 66.7 |
-| UI-TARS-1.5-7B → Qwen3-VL-235B → Gemini-3-pro         | 77.5 | 74.5     | 62.4 | 73.9       | 83.5   | 71.4 | 73.5 |
 
 
 
@@ -85,47 +84,79 @@ pip install pillow requests transformers torch tqdm matplotlib
   - `OPENROUTER_API_KEY` for all models via OpenRouter
   - `DASHSCOPE_API_KEY` for qwen3-vl-32b-instruct
 
+Example:
+
+```
+# macOS/Linux
+export OPENROUTER_API_KEY=your_key_here
+export DASHSCOPE_API_KEY=your_key_here
+
+# Windows PowerShell
+$Env:OPENROUTER_API_KEY="your_key_here"
+$Env:DASHSCOPE_API_KEY="your_key_here"
+```
+
 ## Quick Start
-Dataset download
 
-- TPanel-UI (HuggingFace): https://huggingface.co/datasets/chico-research/tpanel-ui
-- ScreenSpot-Pro (HuggingFace):
+### TPanel-UI
+- Dataset: https://huggingface.co/datasets/chico-research/tpanel-ui
+- Download via CLI:
+  ```
+  hf download chico-research/tpanel-ui --repo-type dataset --local-dir ./tpanel-ui
+  ```
+- Directory layout:
+  ```
+  ./tpanel-ui/
+    images/        # screenshots
+    annotations/   # test samples (*.json)
+  ```
+- Batch evaluation:
+  ```
+  python cli/main.py \
+    --mode triple \
+    --model1 qwen/qwen3-vl-235b-a22b-instruct \
+    --model2 qwen/qwen3-vl-235b-a22b-instruct \
+    --model3 qwen/qwen3-vl-235b-a22b-instruct \
+    --batch \
+    --dataset_type tpanelui \
+    --screens_dir ./tpanel-ui/images \
+    --tests_dir ./tpanel-ui/annotations \
+    --task all \
+    --inst_style instruction \
+    --gt_type positive \
+    --output ./logs.json
+  ```
+
+### ScreenSpot-Pro
+- Dataset:
   - Official: https://huggingface.co/datasets/likaixin/ScreenSpot-Pro
-  - Mirror (Voxel51): https://huggingface.co/datasets/Voxel51/ScreenSpot-Pro
-
-Download via CLI:
-
-```
-hf download chico-research/tpanel-ui --repo-type dataset --local-dir ./tpanel-ui
-
-# ScreenSpot-Pro (choose one)
-hf download likaixin/ScreenSpot-Pro --repo-type dataset --local-dir ./screenspot-pro
-# Or use the Voxel51 mirror (their card also shows FiftyOne usage; direct file download works too)
-hf download Voxel51/ScreenSpot-Pro --repo-type dataset --local-dir ./screenspot-pro
-```
-
-Example directory layout (may vary; refer to dataset card):
-
-```
-./tpanel-ui/
-  images/                # screenshots
-  annotations/                 # test samples (*.json)
-
-./screenspot-pro/
-  images/                # high-resolution screenshots
-  annotations/           # annotations (bbox, instruction, ui_type, etc.)
-```
-
-Batch evaluation parameter mapping:
-
-```
-# TPanel-UI
---dataset_type tpanelui --screens_dir ./tpanel-ui/images --tests_dir ./tpanel-ui/jsons
-
-# ScreenSpot-Pro
---dataset_type sspro --screens_dir ./screenspot-pro/images --tests_dir ./screenspot-pro/jsons
-```
-```
+  - Repository: https://github.com/likaixin2000/ScreenSpot-Pro-GUI-Grounding
+- Download via CLI:
+  ```
+  hf download likaixin/ScreenSpot-Pro --repo-type dataset --local-dir ./screenspot-pro
+  ```
+- Directory layout:
+  ```
+  ./screenspot-pro/
+    images/        # high-resolution screenshots
+    annotations/   # annotations (bbox, instruction, ui_type, etc.)
+  ```
+- Batch evaluation:
+  ```
+  python cli/main.py \
+    --mode triple \
+    --model1 qwen/qwen3-vl-235b-a22b-instruct \
+    --model2 qwen/qwen3-vl-235b-a22b-instruct \
+    --model3 qwen/qwen3-vl-235b-a22b-instruct \
+    --batch \
+    --dataset_type sspro \
+    --screens_dir ./screenspot-pro/images \
+    --tests_dir ./screenspot-pro/annotations \
+    --task all \
+    --inst_style instruction \
+    --gt_type positive \
+    --output ./logs.json
+  ```
 
 Run pipelines via CLI (OpenRouter only):
 
@@ -189,18 +220,19 @@ Notes:
 - `bbox` is `[x1, y1, x2, y2]` in pixel coordinates; scripts normalize internally.
 - For negative samples, `gt_type` is `negative` and `bbox` may be omitted.
 
-## Evaluation
-The `eval_screenspot_pro.py` script computes metrics and visualizations for a dataset.
+## Evaluation (ScreenSpot-Pro)
+The [eval_screenspot_pro.py](scripts/eval_screenspot_pro.py) script computes metrics and visualizations for ScreenSpot-Pro.
 
 Example invocation (requires mapping in `model_factory.py`; otherwise use dynamic import):
 
 ```
-python eval_screenspot_pro.py \
+python scripts/eval_screenspot_pro.py \
   --model_type qwen3vl_235b_triple \
   --screenspot_imgs /path/to/images \
-  --screenspot_test /path/to/test_jsons \
+  --screenspot_test /path/to/annotations \
   --task all \
   --inst_style instruction \
+  --language en \
   --gt_type positive \
   --log_path ./logs.json
 ```
@@ -208,7 +240,7 @@ python eval_screenspot_pro.py \
 
 
 
-If your model file resides under `models/TPanel_UI` or `models/ScreenSpot-pro`, align import paths in `model_factory.py` or use dynamic import as shown. Note: folders with characters like spaces, hyphens, or parentheses are not Python packages; dynamic import by file path avoids this.
+If your model file resides under `models/TPanel_UI` or `models/ScreenSpot-pro`, align import paths in [model_factory.py](scripts/model_factory.py) or use dynamic import as shown. Note: folders with characters like spaces, hyphens, or parentheses are not Python packages; dynamic import by file path avoids this.
 
 
 ## Pipeline
@@ -230,7 +262,6 @@ If your model file resides under `models/TPanel_UI` or `models/ScreenSpot-pro`, 
 - Images and JSON annotations with fields: `id`, `img_filename`, `img_size`, `bbox` (x1,y1,x2,y2), `platform`, `application`, `data_type/ui_type`, `instruction`, `language`, `gt_type`, `instruction_style`.
 - Positive samples include a target `bbox`; negative samples are explicitly labeled with `gt_type=negative`.
 - Dataset: https://huggingface.co/datasets/chico-research/tpanel-ui
-- We recommend using the command-line interface to obtain the dataset of this paper: hf download chico-research/tpanel-ui --repo-type dataset --local-dir [your_local_storage_path]
 
 ## Experimental Setup
 - Environment variables: `OPENROUTER_API_KEY` (OpenRouter).
