@@ -233,11 +233,8 @@ def run_batch(args):
         if "img_size" not in sample:
             sample["img_size"] = [img.width, img.height]
         
-        if "bbox" in sample and len(sample["bbox"]) == 4:
-            x, y, w, h = sample["bbox"][0], sample["bbox"][1], sample["bbox"][2], sample["bbox"][3]
-            if x < w and y < h:
-                sample["bbox"] = [x, y, x + w, y + h]
-        
+        # bbox is [x1, y1, x2, y2] in pixels for both ScreenSpot-Pro and TPanel-UI; use it as-is.
+
         if "data_type" in sample and "ui_type" not in sample:
             sample["ui_type"] = sample["data_type"]
         
