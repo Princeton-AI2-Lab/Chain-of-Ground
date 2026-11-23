@@ -406,9 +406,7 @@ def main(args):
 
         
         
-        if "bbox" in sample and len(sample["bbox"]) == 4:  
-            x, y, w, h = sample["bbox"]  
-            sample["bbox"] = [x, y, x + w, y + h]  
+        # bbox is already [x1, y1, x2, y2] in pixels (ScreenSpot-Pro and TPanel-UI); use it as-is.
         
       
         if "data_type" in sample and "ui_type" not in sample:  
